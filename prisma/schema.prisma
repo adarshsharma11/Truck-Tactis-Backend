@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+//
+// ENUMS
+//
+enum TruckType {
+  SMALL
+  MEDIUM
+  LARGE
+  HEAVY_DUTY
+}
+
+enum TruckStatus {
+  AVAILABLE
+  IN_TRANSIT
+  MAINTENANCE
+  UNAVAILABLE
+}
+
+enum ActionType {
+  PICKUP
+  DROPOFF
+}
+
+//
+// MODELS
+//
+
+model Truck {
+  id                Int           @id @default(autoincrement())
+  truckName         String        @unique
+  capacityCuFt      Float         // Volume capacity in cubic feet
+  maxWeightLbs      Float         // Weight capacity in pounds
+  lengthFt          Float         // Truck length (ft)
+  widthFt           Float         // Truck width (ft)
+  heightFt          Float         // Truck height (ft)
+  truckType         TruckType     // Enum: Small, Medium, Large, etc.
+  color             String?       // Optional - for identification
+  yearOfManufacture Int?          // For maintenance scheduling
+  isActive          Boolean       @default(true)
+  currentStatus     TruckStatus   @default(AVAILABLE) // AVAILABLE / IN_TRANSIT / MAINTENANCE
+
+  // Safety + restriction controls
+  restrictedLoadTypes Json?       // e.g., ["Heavy Machinery", "Hazardous"]
+
+  // Basic GPS tracking
+  gpsEnabled        Boolean       @default(true)
+  lastKnownLat      Float?
+  lastKnownLng      Float?
+
+  // Relationships
+  driverId          Int?          @unique
+  driver            Driver?       @relation(fields: [driverId], references: [id])
+  jobs              Job[]
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model Driver {
+  id              Int        @id @default(autoincrement())
+  name            String
+  licenseNo       String     @unique
+  phone           String?
+  
+  // Reverse one-to-one link
+  truck           Truck?
+
+  jobs            Job[]
+
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Location {
+  id             Int         @id @default(autoincrement())
+  placeId        String      @unique           // Google Place ID
+  name           String                         // Location name
+  address        String                         // Full address
+  latitude       Float                          // Lat from Google Maps
+  longitude      Float                          // Lng from Google Maps
+  city           String?
+  state          String?
+  country        String?
+  postalCode     String?
+  isSaved        Boolean      @default(false)   // If user saved this
+  createdById    String?                        // User ID (string)
+  createdBy      User?         @relation(fields: [createdById], references: [id])
+
+  jobs           Job[]
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Job {
+  id                Int          @id @default(autoincrement())
+  title             String
+  actionType        ActionType   // PICKUP or DROPOFF
+  locationId        Int?         // Link to location
+  location          Location?    @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  priority          Int          @default(1)   // Lower = higher priority
+  earliestTime      DateTime?    // Earliest allowed time
+  latestTime        DateTime?    // Latest allowed time
+  serviceMinutes    Int?         // Duration in minutes
+  notes             String?      // Special instructions
+  largeTruckOnly    Boolean      @default(false)
+  curfewFlag        Boolean      @default(false)
+
+  // Assignments
+  assignedTruckId   Int?
+  assignedTruck     Truck?       @relation(fields: [assignedTruckId], references: [id])
+
+  assignedDriverId  Int?
+  assignedDriver    Driver?      @relation(fields: [assignedDriverId], references: [id])
+
+  // Status tracking
+  isCompleted       Boolean      @default(false)
+  isFiction         Boolean      @default(false)
+  datePublished     DateTime     @default(now())
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model User {
+  id        String     @id @unique
+  fullName  String
+  username  String     @unique
+  password  String
+  email     String
+
+  // Back relation for saved locations
+  locations Location[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
