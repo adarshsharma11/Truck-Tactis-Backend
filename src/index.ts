@@ -13,7 +13,7 @@ import { pino } from "pino";
 dotenv.config();
 
 export const logger = pino({ name: "server start" });
-const PORT: number = parseInt(process.env.PORT as string, 10);
+// const PORT: number = parseInt(process.env.PORT as string, 10);
 
 const app = express();
 
@@ -46,6 +46,6 @@ app.use(notFoundHandler);
 // Error Handling Middleware
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  logger.info(`Listening on PORT ${PORT}`);
-});
+// app.listen(PORT, () => {
+//   logger.info(`Listening on PORT ${PORT}`);
+// });
