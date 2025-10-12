@@ -54,3 +54,5 @@ app.use(errorHandler);
 // app.listen(PORT, () => {
 //   logger.info(`Listening on PORT ${PORT}`);
 // });
+
+export default app;
