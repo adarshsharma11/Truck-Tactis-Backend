@@ -7,13 +7,10 @@
     "seed": "node --require esbuild-register prisma/seed.ts"
   },
   "scripts": {
-   "seed": "npx prisma db seed",
-  "generate": "prisma generate",
-  "build": "tsc && npm run generate",
-  "vercel-build": "npm run generate && npm run build",
-  "start": "node dist/index.js",
-  "dev": "ts-node-dev src/index.ts | pino-pretty",
-  "postinstall": "prisma generate"
+    "seed": "npx prisma db seed",
+    "build": "tsc && prisma generate",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev src/index.ts | pino-pretty"
   },
   "keywords": [],
   "author": "",
