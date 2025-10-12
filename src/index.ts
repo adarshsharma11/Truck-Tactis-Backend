@@ -35,6 +35,11 @@ app.use(cookieParser());
 // Request Logger
 app.use(requestLogger)
 
+app.get('/', (req, res) => {
+  res.status(200).send('🚛 Truck Tactics backend is live and database is connected.');
+});
+
+
 // Main Routes
 app.use('/api/auth', authRouter);
 app.use('/api/profile', profileRouter);
