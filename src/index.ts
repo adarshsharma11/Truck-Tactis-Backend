@@ -18,13 +18,13 @@ export const logger = pino({ name: "server start" });
 const app = express();
 
 // CORS Middleware
-const corsOptions = {
-  origin: process.env.APP_ENV == 'developement' ? '*' : process.env.ORIGIN,
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true,
-  optionsSuccessStatus: 204,
-};
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: "*", // ⚠️ Allow all origins
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
+    credentials: false, // disable cookies/auth for wildcard
+  })
+);
 // JSON Middleware & Form Data
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -34,11 +34,6 @@ app.use(cookieParser());
 
 // Request Logger
 app.use(requestLogger)
-
-app.get('/', (req, res) => {
-  res.status(200).send('🚛 Truck Tactics backend is live and database is connected.');
-});
-
 
 // Main Routes
 app.use('/api/auth', authRouter);
