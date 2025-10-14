@@ -3,7 +3,9 @@ import express from 'express';
 import cors from 'cors';
 import authRouter from './routes/auth.router';
 import profileRouter from './routes/profile.router';
+import itemRouter from './routes/item.router';
 import truckRouter from './routes/truck.router';
+import categoryRouter from './routes/category.router';
 import { notFoundHandler } from './middleware/not-found';
 import { errorHandler } from './middleware/error-handler';
 import cookieParser from 'cookie-parser';
@@ -39,6 +41,10 @@ app.use(requestLogger)
 app.use('/api/auth', authRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/trucks', truckRouter);
+app.use('/api/items', itemRouter);
+app.use('/api/categories', categoryRouter);
+
+
 
 // Not Found Middleware
 app.use(notFoundHandler);
@@ -46,8 +52,10 @@ app.use(notFoundHandler);
 // Error Handling Middleware
 app.use(errorHandler);
 
-// app.listen(PORT, () => {
-//   logger.info(`Listening on PORT ${PORT}`);
-// });
+const PORT = process.env.PORT || 6000;
+
+app.listen(PORT, () => {
+  logger.info(`Listening on PORT ${PORT}`);
+});
 
 export default app;
