@@ -7,24 +7,12 @@ import { TJobSchema, TJobID, TJobUpdate } from '../types/job';
 export const createJob = async (data: TJobSchema) => {
   let locationId = data.locationId ?? null;
 
-  // ✅ If no locationId but location details provided
+  // 🧭 Handle location (same as before)
   if (!locationId && data.location) {
     const loc = data.location;
-
-    // 🔒 Use upsert (atomic find-or-create by placeId)
     const location = await db.location.upsert({
       where: { placeId: loc.placeId ?? `manual-${Date.now()}` },
-      update: {
-        name: loc.name,
-        address: loc.address,
-        latitude: loc.latitude,
-        longitude: loc.longitude,
-        city: loc.city ?? null,
-        state: loc.state ?? null,
-        country: loc.country ?? null,
-        postalCode: loc.postalCode ?? null,
-        isSaved: loc.isSaved ?? false,
-      },
+      update: { ...loc },
       create: {
         placeId: loc.placeId ?? `manual-${Date.now()}`,
         name: loc.name,
@@ -38,11 +26,27 @@ export const createJob = async (data: TJobSchema) => {
         isSaved: loc.isSaved ?? false,
       },
     });
-
     locationId = location.id;
   }
 
-  // ✅ Create the Job and attach related records
+  // 🧩 Validate Truck + Driver existence
+  let truckId: number | null = null;
+  if (data.assignedTruckId) {
+    const truckExists = await db.truck.findUnique({
+      where: { id: data.assignedTruckId },
+    });
+    if (truckExists) truckId = truckExists.id;
+  }
+
+  let driverId: number | null = null;
+  if (data.assignedDriverId) {
+    const driverExists = await db.driver.findUnique({
+      where: { id: data.assignedDriverId },
+    });
+    if (driverExists) driverId = driverExists.id;
+  }
+
+  // ✅ Safe create (no invalid foreign keys)
   const job = await db.job.create({
     data: {
       title: data.title,
@@ -52,8 +56,8 @@ export const createJob = async (data: TJobSchema) => {
       priority: data.priority ?? 1,
       largeTruckOnly: data.largeTruckOnly ?? false,
       curfewFlag: data.curfewFlag ?? false,
-      assignedTruckId: data.assignedTruckId ?? null,
-      assignedDriverId: data.assignedDriverId ?? null,
+      assignedTruckId: truckId,
+      assignedDriverId: driverId,
       isCompleted: data.isCompleted ?? false,
       isFiction: data.isFiction ?? false,
       items: data.items?.length ? { connect: data.items.map((id) => ({ id })) } : undefined,
@@ -68,6 +72,7 @@ export const createJob = async (data: TJobSchema) => {
 
   return job;
 };
+
 
 // =============================
 // 📋 List Jobs (with filters + pagination)
