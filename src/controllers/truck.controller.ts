@@ -34,3 +34,4 @@ export const getTrucks = async (req: Request, res: Response, next: NextFunction)
     return sendErrorResponse(res, error.message || 'Failed to fetch trucks');
   }
 };
+

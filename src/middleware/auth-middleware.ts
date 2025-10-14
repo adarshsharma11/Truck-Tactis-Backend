@@ -11,7 +11,7 @@ const protectAuth = async (request: Request, response: Response, next: NextFunct
       const decoded = verifyToken(token);
       const authUser = await UserService.getUserByID(decoded.id);
       if (authUser?.username) {
-        request.user = authUser;
+        (request as any).user = authUser;
       }
       next();
     } catch (error: any) {

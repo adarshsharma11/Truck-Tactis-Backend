@@ -1,5 +1,5 @@
 import { db } from '../utils/db.server';
-import { TJobSchema, TJobID, TJobUpdate } from '../types/job';
+import { TJobSchema, TJobID } from '../types/job';
 
 // =============================
 // ➕ Create Job with Location & Items
