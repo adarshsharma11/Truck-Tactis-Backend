@@ -24,7 +24,6 @@ export const createJob = async (data: TJobSchema) => {
         country: loc.country ?? null,
         postalCode: loc.postalCode ?? null,
         isSaved: loc.isSaved ?? false,
-        createdById: loc.createdById ?? null,
       },
       create: {
         placeId: loc.placeId ?? `manual-${Date.now()}`,
@@ -37,7 +36,6 @@ export const createJob = async (data: TJobSchema) => {
         country: loc.country ?? null,
         postalCode: loc.postalCode ?? null,
         isSaved: loc.isSaved ?? false,
-        createdById: loc.createdById ?? null,
       },
     });
 
