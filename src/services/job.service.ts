@@ -7,33 +7,44 @@ import { TJobSchema, TJobID, TJobUpdate } from '../types/job';
 export const createJob = async (data: TJobSchema) => {
   let locationId = data.locationId ?? null;
 
+  // ✅ If no locationId but location details provided
   if (!locationId && data.location) {
     const loc = data.location;
-    let location = loc.placeId
-      ? await db.location.findUnique({ where: { placeId: loc.placeId } })
-      : null;
 
-    if (!location) {
-      location = await db.location.create({
-        data: {
-          placeId: loc.placeId ?? `manual-${Date.now()}`,
-          name: loc.name,
-          address: loc.address,
-          latitude: loc.latitude,
-          longitude: loc.longitude,
-          city: loc.city ?? null,
-          state: loc.state ?? null,
-          country: loc.country ?? null,
-          postalCode: loc.postalCode ?? null,
-          isSaved: loc.isSaved ?? false,
-          createdById: loc.createdById ?? null,
-        },
-      });
-    }
+    // 🔒 Use upsert (atomic find-or-create by placeId)
+    const location = await db.location.upsert({
+      where: { placeId: loc.placeId ?? `manual-${Date.now()}` },
+      update: {
+        name: loc.name,
+        address: loc.address,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        city: loc.city ?? null,
+        state: loc.state ?? null,
+        country: loc.country ?? null,
+        postalCode: loc.postalCode ?? null,
+        isSaved: loc.isSaved ?? false,
+        createdById: loc.createdById ?? null,
+      },
+      create: {
+        placeId: loc.placeId ?? `manual-${Date.now()}`,
+        name: loc.name,
+        address: loc.address,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        city: loc.city ?? null,
+        state: loc.state ?? null,
+        country: loc.country ?? null,
+        postalCode: loc.postalCode ?? null,
+        isSaved: loc.isSaved ?? false,
+        createdById: loc.createdById ?? null,
+      },
+    });
 
     locationId = location.id;
   }
 
+  // ✅ Create the Job and attach related records
   const job = await db.job.create({
     data: {
       title: data.title,
