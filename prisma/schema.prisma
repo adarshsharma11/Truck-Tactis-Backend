@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "mysql"
+  url      = env("DATABASE_URL_LOCAL")
 }
 
 //
@@ -121,6 +121,8 @@ model Job {
   assignedDriverId  Int?
   assignedDriver    Driver?      @relation(fields: [assignedDriverId], references: [id])
 
+   items             Item[]       @relation("JobItems")
+
   // Status tracking
   isCompleted       Boolean      @default(false)
   isFiction         Boolean      @default(false)
@@ -165,6 +167,7 @@ model Item {
   requiresLargeTruck Boolean       @default(false)
   categoryId         Int?
   category           ItemCategory? @relation(fields: [categoryId], references: [id])
+  jobs               Job[]         @relation("JobItems")
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 }
