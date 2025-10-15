@@ -56,6 +56,8 @@ export const createJob = async (data: TJobSchema) => {
       priority: data.priority ?? 1,
       largeTruckOnly: data.largeTruckOnly ?? false,
       curfewFlag: data.curfewFlag ?? false,
+      earliestTime: data.earliestTime ? new Date(data.earliestTime) : null,
+      latestTime: data.latestTime ? new Date(data.latestTime) : null,
       assignedTruckId: truckId,
       assignedDriverId: driverId,
       isCompleted: data.isCompleted ?? false,
