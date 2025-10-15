@@ -18,6 +18,18 @@ export const getItems = async (req: Request, res: Response) => {
   res.json({ success: true, data: items });
 };
 
+export const getCategoriesWithItems = async (_req: Request, res: Response) => {
+  try {
+    const categories = await ItemService.listCategoriesWithItems();
+    res.json({ success: true, data: categories });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to load categories with items",
+    });
+  }
+};
+
 export const getItem = async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const item = await ItemService.getItem(id);

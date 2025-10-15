@@ -14,6 +14,19 @@ export const listItems = async (categoryId?: number) => {
   });
 };
 
+export const listCategoriesWithItems = async () => {
+  const categories = await db.itemCategory.findMany({
+    include: {
+      items: {
+        orderBy: { createdAt: "desc" },
+      },
+    },
+    orderBy: { name: "asc" },
+  });
+
+  return categories;
+};
+
 export const getItem = async (id: TItemID) => {
   return db.item.findUnique({ where: { id }, include: { category: true } });
 };
