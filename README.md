@@ -2,7 +2,7 @@
 
 ## Author:
 
-[Younesse ElKars](#) - [LinkedIn](https://www.linkedin.com/in/younesse-elkars/)
+[Alon](#) 
 
 ## Description:
 
@@ -42,7 +42,7 @@ An Express-based RESTful API with TypeScript and Prisma , managing both authenti
 #### Clone the repo:
 
 ```bash
-git clone https://github.com/Unesdevdev/express-prisma-ts.git
+git clone https://github.com/adarshsharma11/Truck-Tactis-Backend.git
 ```
 
 #### Install dependencies:
