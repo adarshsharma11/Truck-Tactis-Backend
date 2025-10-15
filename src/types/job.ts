@@ -32,8 +32,8 @@ export const jobSchema = z.object({
   isCompleted: z.boolean().default(false),
   isFiction: z.boolean().default(false),
   items: z.array(z.number().int()).optional(),
-  earliestTime: z.string().datetime().nullable().optional(),
-  latestTime: z.string().datetime().nullable().optional(),
+  earliestTime: z.string().nullable().optional(),
+  latestTime: z.string().nullable().optional(),
 });
 
 export const jobUpdateSchema = jobSchema.partial();
