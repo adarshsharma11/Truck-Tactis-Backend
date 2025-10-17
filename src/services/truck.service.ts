@@ -2,6 +2,8 @@ import { db } from '../utils/db.server';
 import { TruckStatus } from '@prisma/client';
 import { TTruckID, TTruckRead, TTruckWrite, TTruckUpdate } from '../types/truck';
 
+const truckOriginalLat = 34.2035603
+const truckOriginalLng = -118.484937
 // =============================
 // 🚛 List all trucks
 // =============================
@@ -80,8 +82,8 @@ export const createTruck = async (truck: TTruckWrite): Promise<TTruckRead> => {
       currentStatus: truck.currentStatus ?? TruckStatus.AVAILABLE,
       restrictedLoadTypes: truck.restrictedLoadTypes ?? [],
       gpsEnabled: truck.gpsEnabled ?? true,
-      lastKnownLat: truck.lastKnownLat ?? null,
-      lastKnownLng: truck.lastKnownLng ?? null,
+      lastKnownLat: truckOriginalLat,
+      lastKnownLng: truckOriginalLng,
       driverId: truck.driverId ?? null,
     },
     include: {
