@@ -126,3 +126,26 @@ export const getJob = async (id: TJobID) => {
     },
   });
 };
+
+// =============================
+// 🔍 Delete One Job by ID
+// =============================
+
+export const deleteJob = async (id: TJobID) => {
+   const jobId = Number(id);
+  if (!Number.isInteger(jobId)) {
+    throw new Error('INVALID_JOB_ID');
+  }
+
+  // check existence
+  const existing = await db.job.findUnique({ where: { id: jobId } });
+  if (!existing) {
+    throw new Error('JOB_NOT_FOUND');
+  }
+  const deleted = await db.job.delete({
+    where: { id: jobId },
+  });
+
+  return deleted; 
+};
+
