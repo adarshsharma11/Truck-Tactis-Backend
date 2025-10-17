@@ -151,6 +151,9 @@ model ItemCategory {
   name        String   @unique
   description String?
   items       Item[]
+  parentId    Int?
+  parent      ItemCategory?    @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    ItemCategory[]   @relation("CategoryHierarchy")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

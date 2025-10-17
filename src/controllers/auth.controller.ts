@@ -5,11 +5,11 @@ import { sendSuccessNoDataResponse, sendSuccessResponse, sendUnauthorizedRespons
 import { comparePasswords } from '../utils/bcryptHandler';
 import { generateToken } from '../utils/jwtHandler';
 
+
 export const login = async (request: Request, response: Response, next: NextFunction) => {
   try {
     const userRequest: TUserSchema = request.body;
     const user = await UserService.getUserByUsername(userRequest.username);
-
     if (!user) {
       return sendUnauthorizedResponse(response, 'Credentials Error');
     }
@@ -18,7 +18,6 @@ export const login = async (request: Request, response: Response, next: NextFunc
 
     if (passwordCompare) {
       const token = generateToken({ id: user.id }, '30d');
-
       response.cookie('jwt', token, {
         httpOnly: true,
         secure: process.env.APP_ENV !== 'developement',

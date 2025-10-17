@@ -57,7 +57,7 @@ app.use(notFoundHandler);
 // Error Handling Middleware
 app.use(errorHandler);
 
-//const PORT = process.env.PORT || 6000;
+// const PORT = process.env.PORT || 6000;
 
 // app.listen(PORT, () => {
 //   logger.info(`Listening on PORT ${PORT}`);
