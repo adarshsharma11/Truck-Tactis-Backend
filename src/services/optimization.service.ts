@@ -238,8 +238,7 @@ export async function optimizeJobs() {
 
 /**
  * Build optimized routes for all trucks with assigned jobs.
- * - decodePolyline: boolean, when true returns decoded coordinates in `route.decoded`
- * - sortStrategy: 'nearest' | 'as_uploaded' (defaults to 'nearest')
+ * Adds a Google Maps route URL to share with drivers.
  */
 export async function getOptimizedRoutes(opts?: { decodePolyline?: boolean; sortStrategy?: "nearest" | "as_uploaded" }) {
   const { decodePolyline = false, sortStrategy = "nearest" } = opts || {};
@@ -264,31 +263,68 @@ export async function getOptimizedRoutes(opts?: { decodePolyline?: boolean; sort
       // Greedy sort by distance from truck start
       sortedJobs = [...jobs].sort((a, b) => {
         if (!a.location || !b.location) return 0;
-        const distA = haversine({ lat: truck.lastKnownLat as number, lon: truck.lastKnownLng as number }, { lat: a.location.latitude as number, lon: a.location.longitude as number });
-        const distB = haversine({ lat: truck.lastKnownLat as number, lon: truck.lastKnownLng as number }, { lat: b.location.latitude as number, lon: b.location.longitude as number });
+        const distA = haversine(
+          { lat: truck.lastKnownLat as number, lon: truck.lastKnownLng as number },
+          { lat: a.location.latitude as number, lon: a.location.longitude as number }
+        );
+        const distB = haversine(
+          { lat: truck.lastKnownLat as number, lon: truck.lastKnownLng as number },
+          { lat: b.location.latitude as number, lon: b.location.longitude as number }
+        );
         return distA - distB;
       });
     }
 
     const points: RoutePoint[] = [
       { lat: truck.lastKnownLat as number, lng: truck.lastKnownLng as number },
-      ...sortedJobs.filter((j: any) => j.location).map((j: any) => ({ lat: j.location.latitude as number, lng: j.location.longitude as number, jobId: j.id, title: j.title })),
+      ...sortedJobs
+        .filter((j: any) => j.location)
+        .map((j: any) => ({
+          lat: j.location.latitude as number,
+          lng: j.location.longitude as number,
+          jobId: j.id,
+          title: j.title,
+        })),
     ];
 
-    const routeData = await getRoutePath(points.map((p) => ({ lat: p.lat as number, lng: p.lng as number })), { decodePolyline });
+    const routeData = await getRoutePath(
+      points.map((p) => ({ lat: p.lat as number, lng: p.lng as number })),
+      { decodePolyline }
+    );
+
+    // ---- Build Google Maps URL ----
+    const origin = `${points[0].lat},${points[0].lng}`;
+    const destination = `${points[points.length - 1].lat},${points[points.length - 1].lng}`;
+    const waypoints = points
+      .slice(1, -1)
+      .map((p) => `${p.lat},${p.lng}`)
+      .join("|");
+
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
+      origin
+    )}&destination=${encodeURIComponent(destination)}${
+      waypoints ? `&waypoints=${encodeURIComponent(waypoints)}` : ""
+    }`;
 
     routes.push({
       truckId: truck.id,
       truckName: truck.truckName,
       driver: truck.driver?.name ?? "Unassigned",
       totalJobs: sortedJobs.length,
-      stops: sortedJobs.map((j: any) => ({ jobId: j.id, title: j.title, lat: j.location?.latitude, lng: j.location?.longitude })),
+      stops: sortedJobs.map((j: any) => ({
+        jobId: j.id,
+        title: j.title,
+        lat: j.location?.latitude,
+        lng: j.location?.longitude,
+      })),
       route: routeData,
+      googleMapsUrl,
     });
   }
 
   return { success: true, totalTrucks: routes.length, routes };
 }
+
 
 // ---- Export default for convenience ---------------------------------------
 export default { optimizeJobs, getOptimizedRoutes };
