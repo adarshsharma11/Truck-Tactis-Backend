@@ -15,7 +15,25 @@ export const createCategory = async (req: Request, res: Response) => {
 export const getCategories = async (_: Request, res: Response) => {
   try {
     const categories = await categoryService.getCategories();
-    res.json({ success: true, data: categories });
+
+    if (!categories || categories.length === 0) {
+      res.status(404).json({ success: false, message: 'No categories found' });
+    }
+    const categoryMap: Record<number, any> = {};
+    const rootCategories: any[] = [];
+
+    categories.forEach((cat: any) => {
+      categoryMap[cat.id] = { ...cat, children: [] };
+    });
+
+    categories.forEach((cat: any) => {
+      if (cat.parentId) {
+        categoryMap[cat.parentId]?.children.push(categoryMap[cat.id]);
+      } else {
+        rootCategories.push(categoryMap[cat.id]);
+      }
+    });
+    res.json({ success: true, data: rootCategories });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
