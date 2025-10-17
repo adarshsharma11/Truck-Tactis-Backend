@@ -10,9 +10,6 @@ export const login = async (request: Request, response: Response, next: NextFunc
   try {
     const userRequest: TUserSchema = request.body;
     const user = await UserService.getUserByUsername(userRequest.username);
-
-    console.log(user)
-
     if (!user) {
       return sendUnauthorizedResponse(response, 'Credentials Error');
     }
@@ -20,9 +17,7 @@ export const login = async (request: Request, response: Response, next: NextFunc
     const passwordCompare = await comparePasswords(userRequest.password, user.password);
 
     if (passwordCompare) {
-      console.log("yes")
       const token = generateToken({ id: user.id }, '30d');
-       console.log(token)
       response.cookie('jwt', token, {
         httpOnly: true,
         secure: process.env.APP_ENV !== 'developement',
