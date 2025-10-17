@@ -179,6 +179,20 @@ export const updateTruckActiveState = async (
 // =============================
 // 🧱 Delete truck
 // =============================
-export const deleteTruck = async (id: TTruckID): Promise<void> => {
-  await db.truck.delete({ where: { id } });
+export const deleteTruck = async (id: TTruckID) => {
+   const truckId = Number(id);
+  if (!Number.isInteger(truckId)) {
+    throw new Error('INVALID_TRUCK_ID');
+  }
+
+  // check existence
+  const existing = await db.truck.findUnique({ where: { id: truckId } });
+  if (!existing) {
+    throw new Error('TRUCK_NOT_FOUND');
+  }
+  const deleted = await db.truck.delete({
+    where: { id: truckId },
+  });
+
+  return deleted; 
 };
