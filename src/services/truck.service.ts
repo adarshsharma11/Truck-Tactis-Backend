@@ -2,6 +2,8 @@ import { db } from '../utils/db.server';
 import { TruckStatus } from '@prisma/client';
 import { TTruckID, TTruckRead, TTruckWrite, TTruckUpdate } from '../types/truck';
 
+const truckOriginalLat = 34.2035603
+const truckOriginalLng = -118.484937
 // =============================
 // 🚛 List all trucks
 // =============================
@@ -80,8 +82,8 @@ export const createTruck = async (truck: TTruckWrite): Promise<TTruckRead> => {
       currentStatus: truck.currentStatus ?? TruckStatus.AVAILABLE,
       restrictedLoadTypes: truck.restrictedLoadTypes ?? [],
       gpsEnabled: truck.gpsEnabled ?? true,
-      lastKnownLat: truck.lastKnownLat ?? null,
-      lastKnownLng: truck.lastKnownLng ?? null,
+      lastKnownLat: truckOriginalLat,
+      lastKnownLng: truckOriginalLng,
       driverId: truck.driverId ?? null,
     },
     include: {
@@ -179,6 +181,20 @@ export const updateTruckActiveState = async (
 // =============================
 // 🧱 Delete truck
 // =============================
-export const deleteTruck = async (id: TTruckID): Promise<void> => {
-  await db.truck.delete({ where: { id } });
+export const deleteTruck = async (id: TTruckID) => {
+   const truckId = Number(id);
+  if (!Number.isInteger(truckId)) {
+    throw new Error('INVALID_TRUCK_ID');
+  }
+
+  // check existence
+  const existing = await db.truck.findUnique({ where: { id: truckId } });
+  if (!existing) {
+    throw new Error('TRUCK_NOT_FOUND');
+  }
+  const deleted = await db.truck.delete({
+    where: { id: truckId },
+  });
+
+  return deleted; 
 };

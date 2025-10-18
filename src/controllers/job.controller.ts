@@ -50,9 +50,17 @@ export const getJobById = async (req: Request, res: Response) => {
     return sendErrorResponse(res, err.message || 'Failed to fetch job');
   }
 };
+// =============================
+// 🔍 Delete Job by ID
+// =============================
 
 export const deleteJob = async (req: Request, res: Response) => {
-  const jobId = Number(req.params.id);
-  await JobService.deleteJob(jobId);
-  res.json({ success: true, message: 'Job deleted successfully' });
+  try {
+    const job = await JobService.deleteJob(Number(req.params.id));
+    if (!job) return sendErrorResponse(res, 'Job not found', 404);
+    return sendSuccessResponse(res, job);
+  } catch (err: any) {
+    console.error('Error deleting job:', err);
+    return sendErrorResponse(res, err.message || 'Failed to delete job');
+  }
 };

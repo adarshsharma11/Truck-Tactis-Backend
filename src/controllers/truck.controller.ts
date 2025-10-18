@@ -35,3 +35,13 @@ export const getTrucks = async (req: Request, res: Response, next: NextFunction)
   }
 };
 
+export const deleteTruck = async (req: Request, res: Response) => {
+  try {
+    const truck = await TruckService.deleteTruck(Number(req.params.id));
+    if (!truck) return sendErrorResponse(res, 'Truck not found', 404);
+    return sendSuccessResponse(res, truck);
+  } catch (err: any) {
+    console.error('Error deleting job:', err);
+    return sendErrorResponse(res, err.message || 'Failed to delete job');
+  }
+};
