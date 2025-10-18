@@ -67,6 +67,10 @@ export const updateCategory = async (req: Request, res: Response) => {
 export const deleteCategory = async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
+    const children = await categoryService.getSubCategories(id);
+    for (const child of children) {
+      await categoryService.deleteCategory(child.id);
+    }
     await categoryService.deleteCategory(id);
     res.json({ success: true, message: 'Category deleted successfully' });
   } catch (error: any) {

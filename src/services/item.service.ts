@@ -5,13 +5,36 @@ export const createItem = async (data: TItemSchema) => {
   return db.item.create({ data, include: { category: true } });
 };
 
-export const listItems = async (categoryId?: number) => {
-  const where = categoryId ? { categoryId } : {};
-  return db.item.findMany({ 
-    where, 
-    include: { category: true }, 
-    orderBy: { id: 'desc' } 
+// List items grouped under categories (hierarchy)
+export const listItems = async () => {
+  // Fetch all categories with their items
+  const categories = await db.itemCategory.findMany({
+    include: {
+      items: {
+        orderBy: { createdAt: 'desc' },
+      },
+    },
+    orderBy: { name: 'asc' },
   });
+
+  // Map for easy lookup
+  const categoryMap: Record<number, any> = {};
+  categories.forEach((cat) => {
+    categoryMap[cat.id] = { ...cat, children: [] };
+  });
+
+  // Build hierarchy
+  const rootCategories: any[] = [];
+  categories.forEach((cat) => {
+    if (cat.parentId) {
+      const parent = categoryMap[cat.parentId];
+      if (parent) parent.children.push(categoryMap[cat.id]);
+    } else {
+      rootCategories.push(categoryMap[cat.id]);
+    }
+  });
+
+  return rootCategories;
 };
 
 export const listCategoriesWithItems = async () => {
@@ -24,7 +47,22 @@ export const listCategoriesWithItems = async () => {
     orderBy: { name: "asc" },
   });
 
-  return categories;
+  const categoryMap: Record<number, any> = {};
+  categories.forEach((cat) => {
+    categoryMap[cat.id] = { ...cat, children: [] };
+  });
+
+  const rootCategories: any[] = [];
+  categories.forEach((cat) => {
+    if (cat.parentId) {
+      const parent = categoryMap[cat.parentId];
+      if (parent) parent.children.push(categoryMap[cat.id]);
+    } else {
+      rootCategories.push(categoryMap[cat.id]);
+    }
+  });
+
+  return rootCategories;
 };
 
 export const getItem = async (id: TItemID) => {
