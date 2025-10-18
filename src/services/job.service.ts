@@ -126,3 +126,12 @@ export const getJob = async (id: TJobID) => {
     },
   });
 };
+
+// =============================
+// 🔍Delete Job by ID
+// =============================
+export const deleteJob = async (id: TJobID) => {
+  await db.job.delete({ where: { id } });
+};
+
+

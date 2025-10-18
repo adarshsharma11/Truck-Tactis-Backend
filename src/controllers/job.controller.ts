@@ -50,3 +50,9 @@ export const getJobById = async (req: Request, res: Response) => {
     return sendErrorResponse(res, err.message || 'Failed to fetch job');
   }
 };
+
+export const deleteJob = async (req: Request, res: Response) => {
+  const jobId = Number(req.params.id);
+  await JobService.deleteJob(jobId);
+  res.json({ success: true, message: 'Job deleted successfully' });
+};

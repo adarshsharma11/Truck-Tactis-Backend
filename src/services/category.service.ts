@@ -20,3 +20,7 @@ export const updateCategory = async (id: TCategoryID, data: TCategoryUpdate) => 
 export const deleteCategory = async (id: TCategoryID) => {
   return db.itemCategory.delete({ where: { id } });
 };
+
+export const getSubCategories = async (id: TCategoryID) => {
+  return db.itemCategory.findMany({ where: { parentId: id } });
+};
