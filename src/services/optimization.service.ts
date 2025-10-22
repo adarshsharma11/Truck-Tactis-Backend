@@ -205,7 +205,10 @@ async function scoreTruckForJob(truck: any, job: any) {
  * Returns a summary object.
  */
 export async function optimizeJobs() {
-  const jobs = await db.job.findMany({ where: { assignedTruckId: null, isCompleted: false }, include: { location: true } });
+ 
+  const jobs = await db.job.findMany({ where: { assignedTruckId: null, isCompleted: false }, 
+    include: { location: true }, orderBy: {  priority: 'desc'} });
+    
   const trucks = await getAvailableTrucks();
   const assignments: any[] = [];
 
@@ -214,11 +217,21 @@ export async function optimizeJobs() {
     let bestScore = 0;
 
     for (const truck of trucks) {
+        const jobsToday = await db.job.count({
+          where: {
+            assignedTruckId: truck.id,
+            isCompleted: false,
+          }
+        });
+      if (jobsToday >= 3) continue;
       try {
-        const score = await scoreTruckForJob(truck, job);
-        if (score > bestScore) {
-          bestScore = score;
-          bestTruck = truck;
+        const jobTruckType = job.largeTruckOnly == true ? "LARGE" : "SMALL";
+        if(truck.truckType == jobTruckType){
+          const score = await scoreTruckForJob(truck, job);
+          if (score > bestScore) {
+            bestScore = score;
+            bestTruck = truck;
+          }
         }
       } catch (err) {
         // continue if one truck scoring fails
