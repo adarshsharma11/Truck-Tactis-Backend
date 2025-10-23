@@ -15,7 +15,7 @@ export const listItems = async (categoryId?: number) => {
       },
     },
     orderBy: { name: 'asc' },
-  });
+  }) as any[];
 
   // Map for lookup
   const categoryMap: Record<number, any> = {};
@@ -50,7 +50,7 @@ export const listCategoriesWithItems = async () => {
       },
     },
     orderBy: { name: "asc" },
-  });
+  }) as any[];
 
   const categoryMap: Record<number, any> = {};
   categories.forEach((cat) => {

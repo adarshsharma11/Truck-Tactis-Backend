@@ -56,7 +56,7 @@ export const createJob = async (data: TJobSchema) => {
       notes: data.notes ?? null,
       priority: data.priority ?? 1,
       largeTruckOnly: data.largeTruckOnly ?? false,
-      truckType:data.truckType as TruckType,
+      truckType: data.truckType as TruckType,
       curfewFlag: data.curfewFlag ?? false,
       earliestTime: data.earliestTime ? new Date(data.earliestTime) : null,
       latestTime: data.latestTime ? new Date(data.latestTime) : null,
@@ -65,7 +65,7 @@ export const createJob = async (data: TJobSchema) => {
       isCompleted: data.isCompleted ?? false,
       isFiction: data.isFiction ?? false,
       items: data.items?.length ? { connect: data.items.map((id) => ({ id })) } : undefined,
-    },
+    } as any,
     include: {
       location: true,
       items: true,
