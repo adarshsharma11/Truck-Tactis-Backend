@@ -323,7 +323,10 @@ export async function getOptimizedRoutes(opts?: { decodePolyline?: boolean; sort
       truckId: truck.id,
       truckName: truck.truckName,
       driver: truck.driver?.name ?? "Unassigned",
+      type: truck.truckType,
+      status:truck.currentStatus,
       totalJobs: sortedJobs.length,
+      color:truck.color,
       stops: sortedJobs.map((j: any) => ({
         jobId: j.id,
         title: j.title,

@@ -121,8 +121,8 @@ model Job {
   assignedDriverId  Int?
   assignedDriver    Driver?      @relation(fields: [assignedDriverId], references: [id])
 
-   items             Item[]       @relation("JobItems")
-
+  items             Item[]       @relation("JobItems")
+  truckType         TruckType    @default(MEDIUM)
   // Status tracking
   isCompleted       Boolean      @default(false)
   isFiction         Boolean      @default(false)
@@ -168,6 +168,7 @@ model Item {
   heightIn           Float?
   notes              String?
   requiresLargeTruck Boolean       @default(false)
+  truckType         TruckType    @default(MEDIUM)
   categoryId         Int?
   category           ItemCategory? @relation(fields: [categoryId], references: [id])
   jobs               Job[]         @relation("JobItems")
