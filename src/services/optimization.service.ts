@@ -225,8 +225,8 @@ export async function optimizeJobs() {
         });
       if (jobsToday >= 3) continue;
       try {
-        const jobTruckType = job.largeTruckOnly == true ? "LARGE" : "SMALL";
-        if(truck.truckType == jobTruckType){
+        const jobTruckType = job.truckType;
+        if(truck.truckType == jobTruckType || jobTruckType == "MEDIUM"){
           const score = await scoreTruckForJob(truck, job);
           if (score > bestScore) {
             bestScore = score;
