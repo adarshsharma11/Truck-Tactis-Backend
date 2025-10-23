@@ -1,5 +1,6 @@
 import { db } from '../utils/db.server';
 import { TJobSchema, TJobID } from '../types/job';
+import { TruckType } from '@prisma/client';
 
 // =============================
 // ➕ Create Job with Location & Items
@@ -55,6 +56,7 @@ export const createJob = async (data: TJobSchema) => {
       notes: data.notes ?? null,
       priority: data.priority ?? 1,
       largeTruckOnly: data.largeTruckOnly ?? false,
+      truckType:data.truckType as TruckType,
       curfewFlag: data.curfewFlag ?? false,
       earliestTime: data.earliestTime ? new Date(data.earliestTime) : null,
       latestTime: data.latestTime ? new Date(data.latestTime) : null,

@@ -26,6 +26,7 @@ export const jobSchema = z.object({
   priority: z.number().int().min(1).default(1),
   notes: z.string().nullable().optional(),
   largeTruckOnly: z.boolean().default(false),
+  truckType: z.string(),
   curfewFlag: z.boolean().default(false),
   assignedTruckId: z.number().nullable().optional(),
   assignedDriverId: z.number().nullable().optional(),
