@@ -7,9 +7,128 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//
-// ENUMS
-//
+model Truck {
+  id                  Int         @id @default(autoincrement())
+  truckName           String      @unique
+  capacityCuFt        Float
+  maxWeightLbs        Float
+  lengthFt            Float
+  widthFt             Float
+  heightFt            Float
+  truckType           TruckType
+  color               String?
+  yearOfManufacture   Int?
+  isActive            Boolean     @default(true)
+  currentStatus       TruckStatus @default(AVAILABLE)
+  restrictedLoadTypes Json?
+  gpsEnabled          Boolean     @default(true)
+  lastKnownLat        Float?
+  lastKnownLng        Float?
+  driverId            Int?        @unique
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  jobs                Job[]
+  driver              Driver?     @relation(fields: [driverId], references: [id])
+}
+
+model Driver {
+  id        Int       @id @default(autoincrement())
+  name      String
+  licenseNo String    @unique
+  phone     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  truckType TruckType @default(MEDIUM)
+  jobs      Job[]
+  truck     Truck?
+}
+
+model Location {
+  id          Int      @id @default(autoincrement())
+  placeId     String   @unique
+  name        String
+  address     String
+  latitude    Float
+  longitude   Float
+  city        String?
+  state       String?
+  country     String?
+  postalCode  String?
+  isSaved     Boolean  @default(false)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  jobs        Job[]
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+}
+
+model Job {
+  id               Int        @id @default(autoincrement())
+  title            String
+  actionType       ActionType
+  locationId       Int?
+  priority         Int        @default(1)
+  earliestTime     DateTime?
+  latestTime       DateTime?
+  serviceMinutes   Int?
+  notes            String?
+  largeTruckOnly   Boolean    @default(false)
+  curfewFlag       Boolean    @default(false)
+  assignedTruckId  Int?
+  assignedDriverId Int?
+  isCompleted      Boolean    @default(false)
+  isFiction        Boolean    @default(false)
+  datePublished    DateTime   @default(now())
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  truckType        TruckType  @default(MEDIUM)
+  assignedDriver   Driver?    @relation(fields: [assignedDriverId], references: [id])
+  assignedTruck    Truck?     @relation(fields: [assignedTruckId], references: [id])
+  location         Location?  @relation(fields: [locationId], references: [id])
+  items            Item[]     @relation("JobItems")
+}
+
+model User {
+  id        String     @id @unique
+  fullName  String
+  username  String     @unique
+  password  String
+  email     String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  locations Location[]
+}
+
+model ItemCategory {
+  id          Int            @id @default(autoincrement())
+  name        String         @unique
+  description String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  parentId    Int?
+  items       Item[]
+  parent      ItemCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    ItemCategory[] @relation("CategoryHierarchy")
+}
+
+model Item {
+  id                 Int           @id @default(autoincrement())
+  name               String
+  sku                String?
+  weightLbs          Float?
+  lengthIn           Float?
+  widthIn            Float?
+  heightIn           Float?
+  notes              String?
+  requiresLargeTruck Boolean       @default(false)
+  categoryId         Int?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  truckType          TruckType     @default(MEDIUM)
+  category           ItemCategory? @relation(fields: [categoryId], references: [id])
+  jobs               Job[]         @relation("JobItems")
+}
+
 enum TruckType {
   SMALL
   MEDIUM
@@ -27,151 +146,4 @@ enum TruckStatus {
 enum ActionType {
   PICKUP
   DROPOFF
-}
-
-//
-// MODELS
-//
-
-model Truck {
-  id                Int           @id @default(autoincrement())
-  truckName         String        @unique
-  capacityCuFt      Float         // Volume capacity in cubic feet
-  maxWeightLbs      Float         // Weight capacity in pounds
-  lengthFt          Float         // Truck length (ft)
-  widthFt           Float         // Truck width (ft)
-  heightFt          Float         // Truck height (ft)
-  truckType         TruckType     // Enum: Small, Medium, Large, etc.
-  color             String?       // Optional - for identification
-  yearOfManufacture Int?          // For maintenance scheduling
-  isActive          Boolean       @default(true)
-  currentStatus     TruckStatus   @default(AVAILABLE) // AVAILABLE / IN_TRANSIT / MAINTENANCE
-
-  // Safety + restriction controls
-  restrictedLoadTypes Json?       // e.g., ["Heavy Machinery", "Hazardous"]
-
-  // Basic GPS tracking
-  gpsEnabled        Boolean       @default(true)
-  lastKnownLat      Float?
-  lastKnownLng      Float?
-
-  // Relationships
-  driverId          Int?          @unique
-  driver            Driver?       @relation(fields: [driverId], references: [id])
-  jobs              Job[]
-
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-}
-
-model Driver {
-  id              Int        @id @default(autoincrement())
-  name            String
-  licenseNo       String     @unique
-  phone           String?
-  
-  // Reverse one-to-one link
-  truck           Truck?
-
-  jobs            Job[]
-
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-}
-
-model Location {
-  id             Int         @id @default(autoincrement())
-  placeId        String      @unique           // Google Place ID
-  name           String                         // Location name
-  address        String                         // Full address
-  latitude       Float                          // Lat from Google Maps
-  longitude      Float                          // Lng from Google Maps
-  city           String?
-  state          String?
-  country        String?
-  postalCode     String?
-  isSaved        Boolean      @default(false)   // If user saved this
-  createdById    String?                        // User ID (string)
-  createdBy      User?         @relation(fields: [createdById], references: [id])
-
-  jobs           Job[]
-
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-}
-
-model Job {
-  id                Int          @id @default(autoincrement())
-  title             String
-  actionType        ActionType   // PICKUP or DROPOFF
-  locationId        Int?         // Link to location
-  location          Location?    @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  priority          Int          @default(1)   // Lower = higher priority
-  earliestTime      DateTime?    // Earliest allowed time
-  latestTime        DateTime?    // Latest allowed time
-  serviceMinutes    Int?         // Duration in minutes
-  notes             String?      // Special instructions
-  largeTruckOnly    Boolean      @default(false)
-  curfewFlag        Boolean      @default(false)
-
-  // Assignments
-  assignedTruckId   Int?
-  assignedTruck     Truck?       @relation(fields: [assignedTruckId], references: [id])
-
-  assignedDriverId  Int?
-  assignedDriver    Driver?      @relation(fields: [assignedDriverId], references: [id])
-
-  items             Item[]       @relation("JobItems")
-  truckType         TruckType    @default(MEDIUM)
-  // Status tracking
-  isCompleted       Boolean      @default(false)
-  isFiction         Boolean      @default(false)
-  datePublished     DateTime     @default(now())
-
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-}
-
-model User {
-  id        String     @id @unique
-  fullName  String
-  username  String     @unique
-  password  String
-  email     String
-
-  // Back relation for saved locations
-  locations Location[]
-
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-}
-
-model ItemCategory {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
-  description String?
-  items       Item[]
-  parentId    Int?
-  parent      ItemCategory?    @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children    ItemCategory[]   @relation("CategoryHierarchy")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model Item {
-  id                 Int           @id @default(autoincrement())
-  name               String
-  sku                String?
-  weightLbs          Float?
-  lengthIn           Float?
-  widthIn            Float?
-  heightIn           Float?
-  notes              String?
-  requiresLargeTruck Boolean       @default(false)
-  truckType         TruckType    @default(MEDIUM)
-  categoryId         Int?
-  category           ItemCategory? @relation(fields: [categoryId], references: [id])
-  jobs               Job[]         @relation("JobItems")
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
 }

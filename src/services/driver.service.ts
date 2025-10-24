@@ -61,6 +61,7 @@ export const createDriver = async (driver: TDriverWrite): Promise<TDriverRead> =
       name: driver.name,
       licenseNo: driver.licenseNo,
       phone: driver.phone ?? null,
+      truckType : driver.truckType
     },
     include: {
       truck: {
