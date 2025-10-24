@@ -9,6 +9,7 @@ import driverRouter from './routes/driver.router';
 import categoryRouter from './routes/category.router';
 import jobRouter from './routes/job.router';
 import optimizationRouter from './routes/optimization.router';
+import metricsRouter from './routes/metrics.router';
 
 import { notFoundHandler } from './middleware/not-found';
 import { errorHandler } from './middleware/error-handler';
@@ -50,6 +51,7 @@ app.use('/api/items', itemRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/jobs', jobRouter);
 app.use('/api/jobs', optimizationRouter);
+app.use('/api/metrics', metricsRouter);
 
 
 

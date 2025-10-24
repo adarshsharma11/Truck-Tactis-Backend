@@ -19,10 +19,15 @@ export const listDrivers = async (): Promise<TDriverRead[]> => {
   });
 
   return drivers.map((d) => ({
-    ...d,
+    id: d.id,
+    name: d.name,
+    licenseNo: d.licenseNo,
     phone: d.phone ?? null,
+    truckType: (d as any).truckType,
     truck: d.truck ?? null,
-  }));
+    createdAt: d.createdAt,
+    updatedAt: d.updatedAt,
+  })) as TDriverRead[];
 };
 
 // =============================
@@ -46,10 +51,15 @@ export const getDriver = async (id: TDriverID): Promise<TDriverRead | null> => {
   if (!driver) return null;
 
   return {
-    ...driver,
+    id: driver.id,
+    name: driver.name,
+    licenseNo: driver.licenseNo,
     phone: driver.phone ?? null,
+    truckType: (driver as any).truckType,
     truck: driver.truck ?? null,
-  };
+    createdAt: driver.createdAt,
+    updatedAt: driver.updatedAt,
+  } as TDriverRead;
 };
 
 // =============================
@@ -61,8 +71,8 @@ export const createDriver = async (driver: TDriverWrite): Promise<TDriverRead> =
       name: driver.name,
       licenseNo: driver.licenseNo,
       phone: driver.phone ?? null,
-      truckType : driver.truckType
-    },
+      truckType: (driver as any).truckType
+    } as any,
     include: {
       truck: {
         select: {
@@ -73,13 +83,18 @@ export const createDriver = async (driver: TDriverWrite): Promise<TDriverRead> =
         },
       },
     },
-  });
+  }) as any;
 
   return {
-    ...created,
+    id: created.id,
+    name: created.name,
+    licenseNo: created.licenseNo,
     phone: created.phone ?? null,
+    truckType: created.truckType,
     truck: created.truck ?? null,
-  };
+    createdAt: created.createdAt,
+    updatedAt: created.updatedAt,
+  } as TDriverRead;
 };
 
 // =============================
@@ -91,7 +106,7 @@ export const updateDriver = async (driver: TDriverUpdate, id: TDriverID): Promis
     data: {
       ...driver,
       phone: driver.phone ?? undefined,
-    },
+    } as any,
     include: {
       truck: {
         select: {
@@ -102,13 +117,18 @@ export const updateDriver = async (driver: TDriverUpdate, id: TDriverID): Promis
         },
       },
     },
-  });
+  }) as any;
 
   return {
-    ...updated,
+    id: updated.id,
+    name: updated.name,
+    licenseNo: updated.licenseNo,
     phone: updated.phone ?? null,
+    truckType: updated.truckType,
     truck: updated.truck ?? null,
-  };
+    createdAt: updated.createdAt,
+    updatedAt: updated.updatedAt,
+  } as TDriverRead;
 };
 
 // =============================
