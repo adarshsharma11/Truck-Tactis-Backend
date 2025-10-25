@@ -64,3 +64,13 @@ export const deleteJob = async (req: Request, res: Response) => {
     return sendErrorResponse(res, err.message || 'Failed to delete job');
   }
 };
+
+export const  completeTruckJobsAndFree = async (req: Request, res: Response) => {
+  try {
+    const { truck_id } = req.body;
+    await JobService.completeJob(Number(truck_id));
+  } catch (error) {
+    console.error('❌ Error completing jobs and freeing truck:', error);
+    throw error;
+  }
+}

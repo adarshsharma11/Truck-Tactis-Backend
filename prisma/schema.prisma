@@ -39,6 +39,8 @@ model Driver {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   truckType TruckType @default(MEDIUM)
+  status    String     @default("AVAILABLE")
+  truckId   Int? 
   jobs      Job[]
   truck     Truck?
 }

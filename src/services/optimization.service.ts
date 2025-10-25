@@ -207,7 +207,7 @@ async function scoreTruckForJob(truck: any, job: any) {
 export async function optimizeJobs() {
  
   const jobs = await db.job.findMany({ where: { assignedTruckId: null, isCompleted: false }, 
-    include: { location: true }, orderBy: {  priority: 'desc'} });
+  include: { location: true }, orderBy: {  priority: 'desc'} });
     
   const trucks = await getAvailableTrucks();
   const assignments: any[] = [];
@@ -226,7 +226,7 @@ export async function optimizeJobs() {
       if (jobsToday >= 3) continue;
       try {
         const jobTruckType = (job as any).truckType;
-        if(truck.truckType == jobTruckType || jobTruckType == "MEDIUM"){
+        if(truck.truckType == jobTruckType || truck.truckType == "MEDIUM"){
           const score = await scoreTruckForJob(truck, job);
           if (score > bestScore) {
             bestScore = score;
@@ -241,6 +241,32 @@ export async function optimizeJobs() {
     }
 
     if (bestTruck) {
+      if (!bestTruck.driver) {
+       const driver = await db.driver.findFirst({
+          where: {
+            status: 'AVAILABLE',
+            OR: [
+              { truckType: bestTruck.truckType },
+              { truckType: 'MEDIUM' } 
+            ],
+          },
+        });
+
+        if (driver) {
+          await db.driver.update({
+            where: { id: driver.id },
+            data: { truckId: bestTruck.id, status: 'ASSIGNED' },
+          });
+
+          await db.truck.update({
+            where: { id: bestTruck.id },
+            data: { driverId: driver.id ,currentStatus:'IN_TRANSIT'},
+          });
+
+          // attach driver info to truck for assignment
+          bestTruck.driver = driver;
+        }
+      }
       await db.job.update({ where: { id: job.id }, data: { assignedTruckId: bestTruck.id, assignedDriverId: bestTruck.driver?.id ?? null } });
       assignments.push({ jobId: job.id, jobTitle: job.title, assignedTruck: bestTruck.truckName, driver: bestTruck.driver?.name ?? "Unassigned", score: Math.round(bestScore * 100) / 100 });
     }
@@ -248,7 +274,6 @@ export async function optimizeJobs() {
 
   return { success: true, totalJobs: jobs.length, assigned: assignments.length, assignments };
 }
-
 /**
  * Build optimized routes for all trucks with assigned jobs.
  * Adds a Google Maps route URL to share with drivers.

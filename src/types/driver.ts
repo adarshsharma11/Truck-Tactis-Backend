@@ -32,6 +32,8 @@ export type TDriverRead = {
   name: string;
   licenseNo: string;
   phone: string | null;
+  status : string;
+  truckId : number | null;
   truckType : TruckType
   truck: TDriverTruck;
   createdAt: Date;
