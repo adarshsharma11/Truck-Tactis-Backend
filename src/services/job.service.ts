@@ -93,7 +93,8 @@ export const listJobs = async (params: {
   const where: any = {};
   if (driverId) where.assignedDriverId = driverId;
   if (truckId) where.assignedTruckId = truckId;
-  if (typeof isCompleted === 'boolean') where.isCompleted = isCompleted;
+  // if (typeof isCompleted === 'boolean') where.isCompleted = isCompleted;
+  where.isCompleted = typeof isCompleted === 'boolean' ? isCompleted : false;
 
   const [jobs, total] = await Promise.all([
     db.job.findMany({
@@ -149,5 +150,24 @@ export const deleteJob = async (id: TJobID) => {
   });
 
   return deleted; 
+};
+
+// =============================
+// 🔍 Complete Job
+// =============================
+
+export const completeJob = async (id: TJobID) => {
+   const truckId = Number(id);
+    const updateJobs = await db.job.updateMany({
+      where: {
+        assignedTruckId: truckId,
+        isCompleted: false,
+      },
+      data: {
+        isCompleted: true,
+      },
+    });
+
+    return updateJobs; 
 };
 
