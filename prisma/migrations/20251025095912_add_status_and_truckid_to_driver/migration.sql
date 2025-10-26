@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Driver" ADD COLUMN     "status" TEXT NOT NULL DEFAULT 'AVAILABLE',
+ADD COLUMN     "truckId" INTEGER;
