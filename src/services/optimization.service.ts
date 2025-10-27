@@ -241,32 +241,6 @@ export async function optimizeJobs() {
     }
 
     if (bestTruck) {
-      if (!bestTruck.driver) {
-       const driver = await db.driver.findFirst({
-          where: {
-            status: 'AVAILABLE',
-            OR: [
-              { truckType: bestTruck.truckType },
-              { truckType: 'MEDIUM' } 
-            ],
-          },
-        });
-
-        if (driver) {
-          await db.driver.update({
-            where: { id: driver.id },
-            data: { truckId: bestTruck.id, status: 'ASSIGNED' },
-          });
-
-          await db.truck.update({
-            where: { id: bestTruck.id },
-            data: { driverId: driver.id ,currentStatus:'IN_TRANSIT'},
-          });
-
-          // attach driver info to truck for assignment
-          bestTruck.driver = driver;
-        }
-      }
       await db.job.update({ where: { id: job.id }, data: { assignedTruckId: bestTruck.id, assignedDriverId: bestTruck.driver?.id ?? null } });
       assignments.push({ jobId: job.id, jobTitle: job.title, assignedTruck: bestTruck.truckName, driver: bestTruck.driver?.name ?? "Unassigned", score: Math.round(bestScore * 100) / 100 });
     }

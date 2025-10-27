@@ -1,4 +1,4 @@
-import { TruckType } from '@prisma/client';
+import { ContactRole, TruckType } from '@prisma/client';
 import { z } from 'zod';
 
 // =============================
@@ -6,8 +6,12 @@ import { z } from 'zod';
 // =============================
 export const driverSchema = z.object({
   name: z.string().min(2, 'Driver name is required'),
-  licenseNo: z.string().min(5, 'License number is required'),
+  licenseNo: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  role : z.nativeEnum(ContactRole,{ required_error: 'Role is required' }),
+  description: z.string().nullable(),
+  truckId : z.number().nullable(),
   truckType: z.nativeEnum(TruckType, { required_error: 'Truck type is required' })
 });
 
@@ -32,6 +36,9 @@ export type TDriverRead = {
   name: string;
   licenseNo: string;
   phone: string | null;
+  email: string | null,
+  role: string | null,
+  description: string | null,
   status : string;
   truckId : number | null;
   truckType : TruckType

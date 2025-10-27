@@ -34,8 +34,11 @@ model Truck {
 model Driver {
   id        Int       @id @default(autoincrement())
   name      String
-  licenseNo String    @unique
+  licenseNo String?    @unique
   phone     String?
+  email     String?        
+  role      ContactRole @default(DRIVER)
+  description String?    
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   truckType TruckType @default(MEDIUM)
@@ -148,4 +151,11 @@ enum TruckStatus {
 enum ActionType {
   PICKUP
   DROPOFF
+}
+enum ContactRole {
+  DRIVER
+  FOREMAN
+  MECHANIC
+  MANAGER
+  OTHER
 }
