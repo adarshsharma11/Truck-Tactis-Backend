@@ -6,7 +6,7 @@ const router = Router();
 router.post('/', addDriver);
 router.get('/', getDrivers);
 router.get('/:id', getDriver);
-router.put('/:id', updateDriver);
+router.patch('/:id', updateDriver);
 router.delete('/:id', deleteDriver);
 
 export default router;

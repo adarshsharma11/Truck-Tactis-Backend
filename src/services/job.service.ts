@@ -172,19 +172,10 @@ export const completeJob = async (truckId: number) => {
   });
 
   if (truck) {
-    const driverId = truck.driverId;
-
     await db.truck.update({
       where: { id: truckId },
-      data: { driverId: null, currentStatus: 'AVAILABLE' }, 
+      data: {currentStatus: 'AVAILABLE' }, 
     });
-
-    if (driverId) {
-      await db.driver.update({
-        where: { id: driverId },
-        data: { truckId: null, status: 'AVAILABLE' },
-      });
-    }
   }
 
   return updatedJobs;

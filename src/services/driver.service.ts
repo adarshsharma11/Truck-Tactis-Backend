@@ -22,6 +22,9 @@ export const listDrivers = async (): Promise<TDriverRead[]> => {
     id: d.id,
     name: d.name,
     licenseNo: d.licenseNo,
+    email: d.email,
+    role: d.role,
+    description: d.description,
     phone: d.phone ?? null,
     status: d.status ,
     truckId: d.truckId ,
@@ -56,6 +59,9 @@ export const getDriver = async (id: TDriverID): Promise<TDriverRead | null> => {
     id: driver.id,
     name: driver.name,
     licenseNo: driver.licenseNo,
+    email: driver.email,
+    role: driver.role,
+    description: driver.description,
     phone: driver.phone ?? null,
     status: driver.status ,
     truckId: driver.truckId,
@@ -75,6 +81,10 @@ export const createDriver = async (driver: TDriverWrite): Promise<TDriverRead> =
       name: driver.name,
       licenseNo: driver.licenseNo,
       phone: driver.phone ?? null,
+      email: driver.email,
+      role: driver.role,
+      truckId: driver.truckId,
+      description: driver.description,
       truckType: (driver as any).truckType
     } as any,
     include: {
@@ -89,11 +99,21 @@ export const createDriver = async (driver: TDriverWrite): Promise<TDriverRead> =
     },
   }) as any;
 
+  if (driver.truckId) {
+    await db.truck.update({
+      where: { id: driver.truckId },
+      data: { driverId: created.id },
+    });
+  }
+
   return {
     id: created.id,
     name: created.name,
     licenseNo: created.licenseNo,
     phone: created.phone ?? null,
+    email: created.email,
+    role: created.role,
+    description: created.description,
     truckType: created.truckType,
     truck: created.truck ?? null,
     createdAt: created.createdAt,
@@ -122,6 +142,13 @@ export const updateDriver = async (driver: TDriverUpdate, id: TDriverID): Promis
       },
     },
   }) as any;
+
+  if (driver.truckId) {
+    await db.truck.update({
+      where: { id: driver.truckId },
+      data: { driverId: id },
+    });
+  }
 
   return {
     id: updated.id,
@@ -153,6 +180,17 @@ export const deleteDriver = async (id: TDriverID) => {
   const deleted = await db.driver.delete({
     where: { id: driverId },
   });
+
+    // If the driver is assigned to a truck, make that truck available again
+  if (existing.truckId) {
+    await db.truck.update({
+      where: { id: existing.truckId },
+      data: {
+        driverId: null,
+        currentStatus: 'AVAILABLE', // optional, if you track status
+      },
+    });
+  }
 
   return deleted;
 };

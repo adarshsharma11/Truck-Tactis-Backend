@@ -35,7 +35,7 @@ export type TTruckID = number;
 export type TTruckDriver = {
   id: number;
   name: string;
-  licenseNo: string;
+  licenseNo: string | null;
   phone: string | null;
 } | null;
 
