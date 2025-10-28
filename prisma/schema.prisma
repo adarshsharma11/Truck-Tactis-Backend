@@ -34,7 +34,7 @@ model Truck {
 model Driver {
   id        Int       @id @default(autoincrement())
   name      String
-  licenseNo String?    @unique
+  licenseNo String?
   phone     String?
   email     String?        
   role      ContactRole @default(DRIVER)
