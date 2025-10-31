@@ -159,7 +159,7 @@ async function getJobLoad(jobId: number) {
 
 async function getAvailableTrucks() {
   return db.truck.findMany({
-    where: { isActive: true, currentStatus: "AVAILABLE" },
+    where: { isActive: true, currentStatus: "AVAILABLE", driverId: { not: null }, },
     include: { driver: true },
   });
 }
@@ -257,7 +257,7 @@ export async function optimizeJobs() {
       `🕕 *Latest Time:* ${formatTime(job.latestTime)}\n` +
       `⭐ *Priority:* ${priority}\n` +
       `🗒️ *Notes:* ${job.notes || "No notes"}`;
-        const recipient = `${bestTruck.driver.phone}`;
+        const recipient = `${bestTruck.driver?.phone}`;
         try {
           await NotificationService.sendWhatsApp(recipient, message);
         } catch (err) {
