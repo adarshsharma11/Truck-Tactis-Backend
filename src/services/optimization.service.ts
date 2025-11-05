@@ -157,10 +157,20 @@ async function getJobLoad(jobId: number) {
   return { totalWeight, totalVolume };
 }
 
-async function getAvailableTrucks() {
+async function getAvailableTrucks(jobDate?: string | Date) {
+  const jobDateObj = jobDate ? new Date(jobDate) : new Date();
+  const startOfDay = new Date(jobDateObj.setHours(0, 0, 0, 0));
+  const endOfDay = new Date(jobDateObj.setHours(23, 59, 59, 999));
   return db.truck.findMany({
     where: { isActive: true, currentStatus: "AVAILABLE", driverId: { not: null }, },
-    include: { driver: true },
+    include: { driver: true ,
+      jobs: {
+        where: {
+          isCompleted: false,
+          date: { gte: startOfDay, lt: endOfDay },
+        },
+      },
+    },
   });
 }
 
@@ -205,12 +215,15 @@ async function scoreTruckForJob(truck: any, job: any) {
  * Assign best available trucks to unassigned jobs.
  * Returns a summary object.
  */
-export async function optimizeJobs() {
+export async function optimizeJobs(jobDate?: string | Date) {
+  const jobDateObj = jobDate ? new Date(jobDate) : new Date(); // default to today
+  const startOfDay = new Date(jobDateObj.setHours(0, 0, 0, 0));
+  const endOfDay = new Date(jobDateObj.setHours(23, 59, 59, 999));
  
-  const jobs = await db.job.findMany({ where: { assignedTruckId: null, isCompleted: false }, 
+  const jobs = await db.job.findMany({ where: { assignedTruckId: null, isCompleted: false, date: { gte: startOfDay, lt: endOfDay }, }, 
   include: { location: true , items :true}, orderBy: {  priority: 'desc'} });
     
-  const trucks = await getAvailableTrucks();
+  const trucks = await getAvailableTrucks(jobDate);
   const assignments: any[] = [];
 
   for (const job of jobs) {
@@ -222,6 +235,7 @@ export async function optimizeJobs() {
           where: {
             assignedTruckId: truck.id,
             isCompleted: false,
+            date: { gte: startOfDay, lt: endOfDay },
           }
         });
       if (jobsToday >= 3) continue;
@@ -235,8 +249,6 @@ export async function optimizeJobs() {
           }
         }
       } catch (err) {
-        // continue if one truck scoring fails
-        // eslint-disable-next-line no-console
         console.warn(`scoreTruckForJob failed for truck ${truck?.id} / job ${job.id}:`, (err as Error).message || err);
       }
     }
@@ -272,14 +284,27 @@ export async function optimizeJobs() {
  * Build optimized routes for all trucks with assigned jobs.
  * Adds a Google Maps route URL to share with drivers.
  */
-export async function getOptimizedRoutes(opts?: { decodePolyline?: boolean; sortStrategy?: "nearest" | "as_uploaded" }) {
-  const { decodePolyline = false, sortStrategy = "nearest" } = opts || {};
-
+export async function getOptimizedRoutes(opts?: { decodePolyline?: boolean; sortStrategy?: "nearest" | "as_uploaded" ; jobDate?: string | Date; }) {
+  const { decodePolyline = false, sortStrategy = "nearest", jobDate } = opts || {};
+  const jobDateObj = jobDate ? new Date(jobDate) : null;
+  console.log(jobDateObj)
   const trucks = await db.truck.findMany({
     where: { isActive: true },
     include: {
       driver: true,
-      jobs: { where: { assignedTruckId: { not: null }, isCompleted: false }, include: { location: true } },
+      jobs: {
+        where: {
+          assignedTruckId: { not: null },
+          isCompleted: false,
+          ...(jobDateObj && {
+            date: {
+              gte: new Date(jobDateObj.setHours(0, 0, 0, 0)),
+              lt: new Date(jobDateObj.setHours(23, 59, 59, 999)),
+            },
+          }),
+        },
+        include: { location: true },
+      },
     },
   });
 

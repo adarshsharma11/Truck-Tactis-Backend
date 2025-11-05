@@ -35,6 +35,7 @@ export const jobSchema = z.object({
   items: z.array(z.number().int()).optional(),
   earliestTime: z.string().nullable().optional(),
   latestTime: z.string().nullable().optional(),
+  date: z.coerce.date()
 });
 
 export const jobUpdateSchema = jobSchema.partial();

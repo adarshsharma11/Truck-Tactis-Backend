@@ -68,6 +68,7 @@ export const createJob = async (data: TJobSchema) => {
       isCompleted: data.isCompleted ?? false,
       isFiction: data.isFiction ?? false,
       items: data.items?.length ? { connect: data.items.map((id) => ({ id })) } : undefined,
+      date : data.date
     } as any,
     include: {
       location: true,
@@ -126,14 +127,27 @@ export const listJobs = async (params: {
   driverId?: number;
   truckId?: number;
   isCompleted?: boolean;
+  date?: Date;
 }) => {
-  const { page = 1, limit = 20, driverId, truckId, isCompleted } = params;
+  const { page = 1, limit = 20, driverId, truckId, isCompleted , date } = params;
 
   const where: any = {};
   if (driverId) where.assignedDriverId = driverId;
   if (truckId) where.assignedTruckId = truckId;
-  // if (typeof isCompleted === 'boolean') where.isCompleted = isCompleted;
   where.isCompleted = typeof isCompleted === 'boolean' ? isCompleted : false;
+  if (date) {
+    // Example: filter jobs created on the same date (ignoring time)
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    where.date = {
+      gte: startOfDay,
+      lte: endOfDay,
+    };
+  }
 
   const [jobs, total] = await Promise.all([
     db.job.findMany({

@@ -3,9 +3,10 @@ import { optimizeJobs, getOptimizedRoutes } from "../services/optimization.servi
 
 const router = express.Router();
 
-router.post("/optimize", async (_req, res) => {
+router.post("/optimize", async (req, res) => {
   try {
-    const result = await optimizeJobs();
+    const { jobDate } = req.body; 
+    const result = await optimizeJobs(jobDate);
     res.json(result);
   } catch (err: any) {
     console.error("[OPTIMIZE] Failed:", err);
@@ -15,8 +16,8 @@ router.post("/optimize", async (_req, res) => {
 
 router.post("/routes", async (req, res) => {
   try {
-    const { decodePolyline } = req.body;
-    const result = await getOptimizedRoutes({ decodePolyline });
+    const { decodePolyline , jobDate } = req.body;
+    const result = await getOptimizedRoutes({ decodePolyline , jobDate});
     res.json(result);
   } catch (err: any) {
     console.error("[ROUTES] Failed:", err);
