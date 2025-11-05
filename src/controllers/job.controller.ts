@@ -22,13 +22,14 @@ export const createJob = async (req: Request, res: Response) => {
 // =============================
 export const getJobs = async (req: Request, res: Response) => {
   try {
-    const { page, limit, driverId, truckId, isCompleted } = req.query;
+    const { page, limit, driverId, truckId, isCompleted , date } = req.query;
     const jobs = await JobService.listJobs({
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
       driverId: driverId ? Number(driverId) : undefined,
       truckId: truckId ? Number(truckId) : undefined,
       isCompleted: isCompleted ? isCompleted === 'true' : undefined,
+      date: date ? new Date(date as string) : undefined,
     });
     return sendSuccessResponse(res, jobs);
   } catch (err: any) {

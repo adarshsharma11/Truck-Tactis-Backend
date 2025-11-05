@@ -73,6 +73,7 @@ model Job {
   actionType       ActionType
   locationId       Int?
   priority         Int        @default(1)
+  date             DateTime?
   earliestTime     DateTime?
   latestTime       DateTime?
   serviceMinutes   Int?
