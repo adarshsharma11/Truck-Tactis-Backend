@@ -4,6 +4,7 @@ export const categorySchema = z.object({
   name: z.string().min(2, 'Category name is required'),
   description: z.string().nullable().optional(),
   parentId: z.number().int().positive().nullable().optional(),
+  quantity: z.boolean().default(false),
 });
 
 export const categoryUpdateSchema = categorySchema.partial();
