@@ -113,6 +113,7 @@ model ItemCategory {
   updatedAt   DateTime       @updatedAt
   parentId    Int?
   items       Item[]
+  quantity    Boolean       @default(false)
   parent      ItemCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children    ItemCategory[] @relation("CategoryHierarchy")
 }
@@ -128,6 +129,7 @@ model Item {
   notes              String?
   requiresLargeTruck Boolean       @default(false)
   categoryId         Int?
+  quantity           Int          @default(0)
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   truckType          TruckType     @default(MEDIUM)
