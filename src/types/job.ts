@@ -35,7 +35,16 @@ export const jobSchema = z.object({
   items: z.array(z.number().int()).optional(),
   earliestTime: z.string().nullable().optional(),
   latestTime: z.string().nullable().optional(),
-  date: z.coerce.date()
+  date: z.coerce.date(),
+  quantityItem: z
+    .array(
+      z.object({
+        id: z.number().int(),
+        quantity: z.number().int().min(1, "Quantity must be at least 1"),
+      })
+    )
+    .optional(),
+
 });
 
 export const jobUpdateSchema = jobSchema.partial();
