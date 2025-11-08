@@ -50,6 +50,21 @@ export const createJob = async (data: TJobSchema) => {
     if (driverExists) driverId = driverExists.id;
   }
 
+  if (Array.isArray(data.quantityItem) && data.quantityItem.length > 0) {
+    for (const qi of data.quantityItem) {
+      const { id, quantity } = qi;
+      if (!id || quantity <= 0) continue;
+      const existingItem = await db.item.findUnique({ where: { id: id } });
+      if (existingItem) {
+        const newQuantity = Math.max((existingItem.quantity ?? 0) - quantity, 0);
+        await db.item.update({
+          where: { id: id },
+          data: { quantity: newQuantity },
+        });
+      }
+    }
+  }
+
   // ✅ Safe create (no invalid foreign keys)
   const job = await db.job.create({
     data: {
@@ -68,7 +83,8 @@ export const createJob = async (data: TJobSchema) => {
       isCompleted: data.isCompleted ?? false,
       isFiction: data.isFiction ?? false,
       items: data.items?.length ? { connect: data.items.map((id) => ({ id })) } : undefined,
-      date : data.date
+      date : data.date,
+      quantityItem: data.quantityItem || [],
     } as any,
     include: {
       location: true,

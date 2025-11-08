@@ -92,6 +92,7 @@ model Job {
   assignedTruck    Truck?     @relation(fields: [assignedTruckId], references: [id])
   location         Location?  @relation(fields: [locationId], references: [id])
   items            Item[]     @relation("JobItems")
+  quantityItem     Json?
 }
 
 model User {
