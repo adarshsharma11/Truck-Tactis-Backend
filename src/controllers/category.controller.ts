@@ -17,8 +17,10 @@ export const getCategories = async (_: Request, res: Response) => {
     const categories = await categoryService.getCategories();
 
     if (!categories || categories.length === 0) {
-      res.status(404).json({ success: false, message: 'No categories found' });
+      // ✅ Add "return" here
+      return res.status(404).json({ success: false, message: 'No categories found' });
     }
+
     const categoryMap: Record<number, any> = {};
     const rootCategories: any[] = [];
 
@@ -33,9 +35,13 @@ export const getCategories = async (_: Request, res: Response) => {
         rootCategories.push(categoryMap[cat.id]);
       }
     });
-    res.json({ success: true, data: rootCategories });
+
+    // ✅ Return here too
+    return res.json({ success: true, data: rootCategories });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Error fetching categories:", error);
+    // ✅ Always return the response
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
