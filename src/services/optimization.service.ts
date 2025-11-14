@@ -225,7 +225,6 @@ export async function optimizeJobs(jobDate?: string | Date) {
     
   const trucks = await getAvailableTrucks(jobDate);
   const assignments: any[] = [];
-
   for (const job of jobs) {
     let bestTruck: any = null;
     let bestScore = 0;
@@ -240,8 +239,20 @@ export async function optimizeJobs(jobDate?: string | Date) {
         });
       if (jobsToday >= 3) continue;
       try {
-        const jobTruckType = (job as any).truckType;
-        if(truck.truckType == jobTruckType || truck.truckType == "MEDIUM"){
+        const jobTruckType = job.truckType;
+        const truckType = truck.truckType;
+         let isMatch = false;
+
+          if (jobTruckType === "LARGE") {
+            isMatch = (truckType === "LARGE");
+          }
+          else if (jobTruckType === "SMALL") {
+            isMatch = (jobTruckType === "SMALL");
+          }
+          else if (jobTruckType === "MEDIUM") {
+            isMatch = (jobTruckType === "MEDIUM" || jobTruckType === "LARGE");
+          }
+          if (isMatch) {
           const score = await scoreTruckForJob(truck, job);
           if (score > bestScore) {
             bestScore = score;
@@ -287,7 +298,6 @@ export async function optimizeJobs(jobDate?: string | Date) {
 export async function getOptimizedRoutes(opts?: { decodePolyline?: boolean; sortStrategy?: "nearest" | "as_uploaded" ; jobDate?: string | Date; }) {
   const { decodePolyline = false, sortStrategy = "nearest", jobDate } = opts || {};
   const jobDateObj = jobDate ? new Date(jobDate) : null;
-  console.log(jobDateObj)
   const trucks = await db.truck.findMany({
     where: { isActive: true },
     include: {
