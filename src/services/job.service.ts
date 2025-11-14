@@ -56,11 +56,11 @@ export const createJob = async (data: TJobSchema) => {
       if (!id || quantity <= 0) continue;
       const existingItem = await db.item.findUnique({ where: { id: id } });
       if (existingItem) {
-        const newQuantity = Math.max((existingItem.quantity ?? 0) - quantity, 0);
-        await db.item.update({
-          where: { id: id },
-          data: { quantity: newQuantity },
-        });
+        // const newQuantity = Math.max((existingItem.quantity ?? 0) - quantity, 0);
+        // await db.item.update({
+        //   where: { id: id },
+        //   data: { quantity: newQuantity },
+        // });
       }
     }
   }
