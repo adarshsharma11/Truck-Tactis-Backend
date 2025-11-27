@@ -110,13 +110,19 @@ export const createJob = async (data: TJobSchema) => {
         if (manager.phone) {
           const recipient = `${manager.phone}`; // format for Twilio WhatsApp
           try {
-          await NotificationService.sendWhatsAppJobCreatedTemplate(recipient, {
-            manager_name: manager.name || "Manager",
-            action_type: job.actionType,
-            truck_type: job.truckType == "MEDIUM" ? "ANY" : (job.truckType as any),
-            job_priority: priority,
-            job_items: itemNames,
-          });
+            const message =
+                "🚛 *New Job Created!*\n\n" +
+                `📌 Title: ${job.title}\n` +
+                `⚙️ Action Type: ${job.actionType}\n` +
+                `🚚 Truck Type: ${job.truckType === "MEDIUM" ? "ANY" : job.truckType}\n` +
+                `📍 Location: ${job.location?.address || job.location?.name || "N/A"}\n` +
+                `🧱 Items: ${itemNames}\n` +
+                `🕒 Earliest Time: ${job.earliestTime ? formatTime(job.earliestTime) : "N/A"}\n` +
+                `🕕 Latest Time: ${job.latestTime ? formatTime(job.latestTime) : "N/A"}\n` +
+                `⭐ Priority: ${priority}\n` +
+                `🗒️ Notes: ${job.notes || "No notes"}`;
+
+          await NotificationService.sendSMS(recipient, message);
           } catch (err) {
             console.error("❌ Failed to send WhatsApp message:", err);
           }
@@ -243,5 +249,9 @@ export const completeJob = async (truckId: number) => {
 
   return updatedJobs;
 };
+
+const formatTime = (time: Date) => {
+  return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
 
 
