@@ -96,7 +96,7 @@ export const createJob = async (data: TJobSchema) => {
 
   const managers = await db.driver.findMany({
       where: { role: 'MANAGER' },
-      select: { phone: true }
+      select: { phone: true, name: true }
   });
 
   const jobLat = job.location?.latitude ?? null;
@@ -105,24 +105,18 @@ export const createJob = async (data: TJobSchema) => {
   if ( jobLat && jobLng && Math.abs(jobLat - truckOriginalLat) < 0.0001 && Math.abs(jobLng - truckOriginalLng) < 0.0001) {
     let priority = job.priority == 1 ? "High" : "Low"; 
     const itemNames = job.items?.map((item) => item.name || `Item #${item.id}`).join(", ") || "No items";
-    const message =
-    `🚛 *New Job Created!*\n\n` +
-    `📌 *Title:* ${job.title}\n` +
-    `⚙️ *Action Type:* ${job.actionType}\n` +
-    `🚚 *Truck Type:* ${job.truckType== "MEDIUM"?"ANY":job.truckType}\n` +
-    `📍 *Location:* ${job.location?.address || job.location?.name || "N/A"}\n` +
-    `🧱 *Items:* ${itemNames}\n` +
-    `🕒 *Earliest Time:* ${formatTime(job.earliestTime)}\n` +
-    `🕕 *Latest Time:* ${formatTime(job.latestTime)}\n` +
-    `⭐ *Priority:* ${priority}\n` +
-    `🗒️ *Notes:* ${job.notes || "No notes"}`;
-
      await Promise.all(
       managers.map(async (manager) => {
         if (manager.phone) {
           const recipient = `${manager.phone}`; // format for Twilio WhatsApp
           try {
-          await NotificationService.sendWhatsApp(recipient, message);
+          await NotificationService.sendWhatsAppJobCreatedTemplate(recipient, {
+            manager_name: manager.name || "Manager",
+            action_type: job.actionType,
+            truck_type: job.truckType == "MEDIUM" ? "ANY" : (job.truckType as any),
+            job_priority: priority,
+            job_items: itemNames,
+          });
           } catch (err) {
             console.error("❌ Failed to send WhatsApp message:", err);
           }
@@ -249,18 +243,5 @@ export const completeJob = async (truckId: number) => {
 
   return updatedJobs;
 };
-
-
-function formatTime(date?: Date | string | null): string {
-  if (!date) return "N/A";
-  const d = new Date(date);
-  return d.toLocaleString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 
