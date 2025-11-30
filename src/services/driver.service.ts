@@ -29,6 +29,8 @@ export const listDrivers = async (): Promise<TDriverRead[]> => {
     status: d.status ,
     truckId: d.truckId ,
     truckType: (d as any).truckType,
+    smsOptIn: (d as any).smsOptIn ?? true,
+    whatsappOptIn: (d as any).whatsappOptIn ?? true,
     truck: d.truck ?? null,
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
@@ -66,6 +68,8 @@ export const getDriver = async (id: TDriverID): Promise<TDriverRead | null> => {
     status: driver.status ,
     truckId: driver.truckId,
     truckType: (driver as any).truckType,
+    smsOptIn: (driver as any).smsOptIn ?? true,
+    whatsappOptIn: (driver as any).whatsappOptIn ?? true,
     truck: driver.truck ?? null,
     createdAt: driver.createdAt,
     updatedAt: driver.updatedAt,
@@ -85,7 +89,9 @@ export const createDriver = async (driver: TDriverWrite): Promise<TDriverRead> =
       role: driver.role,
       truckId: driver.truckId,
       description: driver.description,
-      truckType: (driver as any).truckType
+      truckType: (driver as any).truckType,
+      smsOptIn: (driver as any).smsOptIn ?? true,
+      whatsappOptIn: (driver as any).whatsappOptIn ?? true,
     } as any,
     include: {
       truck: {
@@ -115,6 +121,8 @@ export const createDriver = async (driver: TDriverWrite): Promise<TDriverRead> =
     role: created.role,
     description: created.description,
     truckType: created.truckType,
+    smsOptIn: (created as any).smsOptIn ?? true,
+    whatsappOptIn: (created as any).whatsappOptIn ?? true,
     truck: created.truck ?? null,
     createdAt: created.createdAt,
     updatedAt: created.updatedAt,

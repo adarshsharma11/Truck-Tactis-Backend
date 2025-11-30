@@ -46,6 +46,8 @@ model Driver {
   truckId   Int? 
   jobs      Job[]
   truck     Truck?
+  smsOptIn  Boolean   @default(true)
+  whatsappOptIn Boolean @default(true)
 }
 
 model Location {
