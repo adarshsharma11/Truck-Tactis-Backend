@@ -95,8 +95,7 @@ export const createJob = async (data: TJobSchema) => {
   });
 
   const managers = await db.driver.findMany({
-      where: { role: 'MANAGER' },
-      select: { phone: true, name: true }
+      where: { role: 'MANAGER' }
   });
 
   const jobLat = job.location?.latitude ?? null;
@@ -108,7 +107,7 @@ export const createJob = async (data: TJobSchema) => {
      await Promise.all(
       managers.map(async (manager) => {
         if (manager.phone) {
-          const recipient = `${manager.phone}`; // format for Twilio WhatsApp
+          const recipient = `${manager.phone}`;
           try {
             const message =
                 "🚛 *New Job Created!*\n\n" +
@@ -122,9 +121,21 @@ export const createJob = async (data: TJobSchema) => {
                 `⭐ Priority: ${priority}\n` +
                 `🗒️ Notes: ${job.notes || "No notes"}`;
 
-          await NotificationService.sendSMS(recipient, message);
+            if (manager.smsOptIn) {
+              await NotificationService.sendSMS(recipient, message);
+            }
+
+            if (manager.whatsappOptIn) {
+              await NotificationService.sendWhatsAppJobCreatedTemplate(recipient, {
+                manager_name: manager.name || "Manager",
+                action_type: job.actionType,
+                truck_type: job.truckType === "MEDIUM" ? "ANY" : (job.truckType as any),
+                job_priority: priority,
+                job_items: itemNames,
+              });
+            }
           } catch (err) {
-            console.error("❌ Failed to send WhatsApp message:", err);
+            console.error("❌ Failed to send message:", err);
           }
         }
       })

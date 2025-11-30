@@ -269,18 +269,35 @@ export async function optimizeJobs(jobDate?: string | Date) {
       assignments.push({ jobId: job.id, jobTitle: job.title, assignedTruck: bestTruck.truckName, driver: bestTruck.driver?.name ?? "Unassigned", score: Math.round(bestScore * 100) / 100 });
       let priority = job.priority == 1 ? "High" : "Low"; 
       const itemNames = job.items?.map((item) => item.name || `Item #${item.id}`).join(", ") || "No items";
-        const recipient = `${bestTruck.driver?.phone}`;
-        try {
-          await NotificationService.sendWhatsAppJobCreatedTemplate(recipient, {
-            manager_name: bestTruck.driver?.name || "Driver",
-            action_type: job.actionType,
-            truck_type: job.truckType == "MEDIUM" ? "ANY" : (job.truckType as any),
-            job_priority: priority,
-            job_items: itemNames,
-          });
-        } catch (err) {
-          console.error("❌ Failed to send WhatsApp message:", err);
+      const recipient = bestTruck.driver?.phone ? `${bestTruck.driver.phone}` : undefined;
+      try {
+        if (recipient) {
+          const message =
+            "🚛 New Job Assigned!\n\n" +
+            `📌 Title: ${job.title}\n` +
+            `⚙️ Action Type: ${job.actionType}\n` +
+            `🚚 Truck Type: ${job.truckType == "MEDIUM" ? "ANY" : job.truckType}\n` +
+            `📍 Location: ${job.location?.address || job.location?.name || "N/A"}\n` +
+            `🧱 Items: ${itemNames}\n` +
+            `⭐ Priority: ${priority}`;
+
+          if (bestTruck.driver?.smsOptIn) {
+            await NotificationService.sendSMS(recipient, message);
+          }
+
+          if (bestTruck.driver?.whatsappOptIn) {
+            await NotificationService.sendWhatsAppJobCreatedTemplate(recipient, {
+              manager_name: bestTruck.driver?.name || "Driver",
+              action_type: job.actionType,
+              truck_type: job.truckType == "MEDIUM" ? "ANY" : (job.truckType as any),
+              job_priority: priority,
+              job_items: itemNames,
+            });
+          }
         }
+      } catch (err) {
+        console.error("❌ Failed to send notification:", err);
+      }
     }
   }
 
