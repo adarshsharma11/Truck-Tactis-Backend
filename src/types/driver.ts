@@ -12,7 +12,9 @@ export const driverSchema = z.object({
   role : z.nativeEnum(ContactRole,{ required_error: 'Role is required' }),
   description: z.string().nullable(),
   truckId : z.number().nullable(),
-  truckType: z.nativeEnum(TruckType, { required_error: 'Truck type is required' })
+  truckType: z.nativeEnum(TruckType, { required_error: 'Truck type is required' }),
+  smsOptIn: z.boolean().default(true),
+  whatsappOptIn: z.boolean().default(true)
 });
 
 // For partial updates (PUT/PATCH)
@@ -42,6 +44,8 @@ export type TDriverRead = {
   status : string;
   truckId : number | null;
   truckType : TruckType
+  smsOptIn: boolean;
+  whatsappOptIn: boolean;
   truck: TDriverTruck;
   createdAt: Date;
   updatedAt: Date;
