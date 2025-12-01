@@ -2,6 +2,7 @@ import { db } from '../utils/db.server';
 import { TJobSchema, TJobID } from '../types/job';
 import { TruckType } from '@prisma/client';
 import { NotificationService } from "./NotificationService";
+import type { Driver } from "@prisma/client";
 
 const truckOriginalLat = 34.2035603
 const truckOriginalLng = -118.484937
@@ -10,6 +11,7 @@ const truckOriginalLng = -118.484937
 // =============================
 export const createJob = async (data: TJobSchema) => {
   let locationId = data.locationId ?? null;
+  let dropAddressId = data.dropAddressId ?? null;
 
   // 🧭 Handle location (same as before)
   if (!locationId && data.location) {
@@ -31,6 +33,31 @@ export const createJob = async (data: TJobSchema) => {
       },
     });
     locationId = location.id;
+  }
+
+  if (!dropAddressId && data.dropLocation) {
+    const loc = data.dropLocation;
+    const location = await db.location.upsert({
+      where: { placeId: loc.placeId ?? `manual-${Date.now()}` },
+      update: { ...loc },
+      create: {
+        placeId: loc.placeId ?? `manual-${Date.now()}`,
+        name: loc.name,
+        address: loc.address,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        city: loc.city ?? null,
+        state: loc.state ?? null,
+        country: loc.country ?? null,
+        postalCode: loc.postalCode ?? null,
+        isSaved: loc.isSaved ?? false,
+      },
+    });
+    dropAddressId = location.id;
+  }
+
+  if (!dropAddressId) {
+    dropAddressId = locationId;
   }
 
   // 🧩 Validate Truck + Driver existence
@@ -72,6 +99,7 @@ export const createJob = async (data: TJobSchema) => {
       actionType: data.actionType,
       locationId,
       notes: data.notes ?? null,
+      dropAddressId,
       priority: data.priority ?? 1,
       largeTruckOnly: data.largeTruckOnly ?? false,
       truckType: data.truckType as TruckType,
@@ -88,13 +116,14 @@ export const createJob = async (data: TJobSchema) => {
     } as any,
     include: {
       location: true,
+      dropAddress: true,
       items: true,
       assignedTruck: { include: { driver: true } },
       assignedDriver: true,
     },
   });
 
-  const managers = await db.driver.findMany({
+  const managers: Driver[] = await db.driver.findMany({
       where: { role: 'MANAGER' }
   });
 

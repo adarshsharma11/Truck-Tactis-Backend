@@ -65,7 +65,8 @@ model Location {
   createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  jobs        Job[]
+  jobs        Job[]     @relation("JobLocation")
+  dropJobs    Job[]     @relation("JobDropAddress")
   createdBy   User?    @relation(fields: [createdById], references: [id])
 }
 
@@ -80,6 +81,7 @@ model Job {
   latestTime       DateTime?
   serviceMinutes   Int?
   notes            String?
+  dropAddressId    Int?
   largeTruckOnly   Boolean    @default(false)
   curfewFlag       Boolean    @default(false)
   assignedTruckId  Int?
@@ -92,7 +94,8 @@ model Job {
   truckType        TruckType  @default(MEDIUM)
   assignedDriver   Driver?    @relation(fields: [assignedDriverId], references: [id])
   assignedTruck    Truck?     @relation(fields: [assignedTruckId], references: [id])
-  location         Location?  @relation(fields: [locationId], references: [id])
+  location         Location?  @relation("JobLocation", fields: [locationId], references: [id])
+  dropAddress      Location?  @relation("JobDropAddress", fields: [dropAddressId], references: [id])
   items            Item[]     @relation("JobItems")
   quantityItem     Json?
 }
