@@ -286,13 +286,13 @@ export async function optimizeJobs(jobDate?: string | Date) {
           }
 
           if (bestTruck.driver?.whatsappOptIn) {
-            await NotificationService.sendWhatsAppJobCreatedTemplate(recipient, {
-              manager_name: bestTruck.driver?.name || "Driver",
-              action_type: job.actionType,
-              truck_type: job.truckType == "MEDIUM" ? "ANY" : (job.truckType as any),
-              job_priority: priority,
-              job_items: itemNames,
-            });
+            // await NotificationService.sendWhatsAppJobCreatedTemplate(recipient, {
+            //   manager_name: bestTruck.driver?.name || "Driver",
+            //   action_type: job.actionType,
+            //   truck_type: job.truckType == "MEDIUM" ? "ANY" : (job.truckType as any),
+            //   priority: priority,
+            //   job_items: itemNames,
+            // });
           }
         }
       } catch (err) {
