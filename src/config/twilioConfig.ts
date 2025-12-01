@@ -14,4 +14,5 @@ export const twilioClient: Twilio = twilio(accountSid, authToken);
 export const TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER as string;
 export const TWILIO_SMS_NUMBER = process.env.TWILIO_SMS_NUMBER as string;
 export const TWILIO_MESSAGING_SERVICE_SID = process.env.TWILIO_MESSAGING_SERVICE_SID as string;
-export const TWILIO_CONTENT_SID_JOB_CREATED = process.env.TWILIO_CONTENT_SID_JOB_CREATED as string;export const TWILIO_CONTENT_SID_MANAGER_JOB_CREATED = process.env.TWILIO_CONTENT_SID_MANAGER_JOB_CREATED as string;
+export const TWILIO_CONTENT_SID_JOB_CREATED = process.env.TWILIO_CONTENT_SID_JOB_CREATED as string;
+export const TWILIO_CONTENT_SID_MANAGER_JOB_CREATED = process.env.TWILIO_CONTENT_SID_MANAGER_JOB_CREATED as string;

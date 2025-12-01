@@ -15,6 +15,10 @@ export class NotificationService {
       });
 
       console.log("✅ WhatsApp message sent:", response.sid);
+      try {
+        const status = await NotificationService.getMessageStatus(response.sid);
+        console.log("ℹ️ WhatsApp delivery status:", status);
+      } catch {}
     } catch (error: any) {
       console.error("❌ Error sending WhatsApp message:", error.message);
       throw error;
@@ -34,7 +38,10 @@ export class NotificationService {
         body: message,
       });
 
-      console.log("✅ SMS message sent:", response.sid);
+      try {
+        const status = await NotificationService.getMessageStatus(response.sid);
+        console.log("ℹ️ SMS delivery status:", status);
+      } catch {}
     } catch (error: any) {
       console.error("❌ Error sending SMS:", error.message);
       throw error;
@@ -47,7 +54,7 @@ export class NotificationService {
       manager_name: string;
       action_type: string;
       truck_type: string;
-      job_priority: string;
+      priority: string;
       job_items: string;
     }
   ): Promise<void> {
@@ -62,7 +69,7 @@ export class NotificationService {
           1: variables.manager_name,
           2: variables.action_type,
           3: variables.truck_type,
-          4: variables.job_priority,
+          4: variables.priority,
           5: variables.job_items,
         }),
         from: TWILIO_WHATSAPP_NUMBER,
@@ -70,9 +77,24 @@ export class NotificationService {
         to: `whatsapp:${to}`,
       });
 
-      console.log("✅ WhatsApp template message sent:", response.sid);
+  
+      try {
+        const status = await NotificationService.getMessageStatus(response.sid);
+        console.log("ℹ️ WhatsApp template delivery status:", status);
+      } catch {}
     } catch (error: any) {
       console.error("❌ Error sending WhatsApp template message:", error.message);
+      throw error;
+    }
+  }
+
+  static async getMessageStatus(messageSid: string): Promise<{ sid: string; status: string; errorCode: number | null; errorMessage: string | null; to: string; from: string; }> {
+    try {
+      const msg = await twilioClient.messages(messageSid).fetch();
+      console.log("ℹ️ Twilio message status:", { sid: msg.sid, status: msg.status, errorCode: msg.errorCode, errorMessage: msg.errorMessage });
+      return { sid: msg.sid, status: msg.status as string, errorCode: msg.errorCode ?? null, errorMessage: (msg as any).errorMessage ?? null, to: msg.to as string, from: msg.from as string };
+    } catch (error: any) {
+      console.error("❌ Error fetching Twilio message status:", error.message);
       throw error;
     }
   }

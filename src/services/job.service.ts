@@ -130,7 +130,7 @@ export const createJob = async (data: TJobSchema) => {
                 manager_name: manager.name || "Manager",
                 action_type: job.actionType,
                 truck_type: job.truckType === "MEDIUM" ? "ANY" : (job.truckType as any),
-                job_priority: priority,
+                priority: priority,
                 job_items: itemNames,
               });
             }
