@@ -22,11 +22,12 @@ export const jobSchema = z.object({
       isSaved: z.boolean().optional(),
       createdById: z.string().optional(),
     })
+    .nullable()
     .optional(),
   priority: z.number().int().min(1).default(1),
   notes: z.string().nullable().optional(),
-  dropAddressId: z.number().int().optional(),
-  dropAddress: z.string().optional(),
+  dropAddressId: z.number().int().nullable().optional(),
+  dropAddress: z.string().nullable().optional(),
   dropLocation: z
     .object({
       placeId: z.string().optional(),
@@ -41,6 +42,7 @@ export const jobSchema = z.object({
       isSaved: z.boolean().optional(),
       createdById: z.string().optional(),
     })
+    .nullable()
     .optional(),
   largeTruckOnly: z.boolean().default(false),
   truckType: z.string(),
