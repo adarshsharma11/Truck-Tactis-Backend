@@ -62,16 +62,17 @@ export class NotificationService {
       if (!TWILIO_MESSAGING_SERVICE_SID || !TWILIO_CONTENT_SID_JOB_CREATED) {
         throw new Error("Twilio Messaging Service SID or Content SID missing in environment variables");
       }
-
       const response = await twilioClient.messages.create({
-        contentSid: TWILIO_CONTENT_SID_JOB_CREATED,
-        contentVariables: JSON.stringify({
-          1: variables.manager_name,
-          2: variables.action_type,
-          3: variables.truck_type,
-          4: variables.priority,
-          5: variables.job_items,
-        }),
+      contentSid: TWILIO_CONTENT_SID_JOB_CREATED,
+      contentVariables: JSON.stringify({
+        manager_name: variables.manager_name,
+        action_type: variables.action_type,
+        truck_type: variables.truck_type,
+        priority: variables.priority,
+        job_items: Array.isArray(variables.job_items)
+          ? variables.job_items.join(", ")
+          : variables.job_items,
+      }),
         from: TWILIO_WHATSAPP_NUMBER,
         messagingServiceSid: TWILIO_MESSAGING_SERVICE_SID,
         to: `whatsapp:${to}`,

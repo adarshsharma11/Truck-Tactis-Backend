@@ -95,7 +95,8 @@ export const createJob = async (data: TJobSchema) => {
   });
 
   const managers = await db.driver.findMany({
-      where: { role: 'MANAGER' }
+      where: { role: 'MANAGER' },
+      select: { id: true, name: true, phone: true, smsOptIn: true, whatsappOptIn: true }
   });
 
   const jobLat = job.location?.latitude ?? null;
@@ -113,7 +114,7 @@ export const createJob = async (data: TJobSchema) => {
                 "🚛 *New Job Created!*\n\n" +
                 `📌 Title: ${job.title}\n` +
                 `⚙️ Action Type: ${job.actionType}\n` +
-                `🚚 Truck Type: ${job.truckType === "MEDIUM" ? "ANY" : job.truckType}\n` +
+                `🚚 Truck Type: ${job.truckType === "MEDIUM" ? "ANY" : String(job.truckType)}\n` +
                 `📍 Location: ${job.location?.address || job.location?.name || "N/A"}\n` +
                 `🧱 Items: ${itemNames}\n` +
                 `🕒 Earliest Time: ${job.earliestTime ? formatTime(job.earliestTime) : "N/A"}\n` +
@@ -129,7 +130,7 @@ export const createJob = async (data: TJobSchema) => {
               await NotificationService.sendWhatsAppJobCreatedTemplate(recipient, {
                 manager_name: manager.name || "Manager",
                 action_type: job.actionType,
-                truck_type: job.truckType === "MEDIUM" ? "ANY" : (job.truckType as any),
+                truck_type: job.truckType === "MEDIUM" ? "ANY" : String(job.truckType),
                 priority: priority,
                 job_items: itemNames,
               });

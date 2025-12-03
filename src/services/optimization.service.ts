@@ -2,6 +2,7 @@ import { db } from "../utils/db.server";
 import haversine from "haversine-distance";
 import axios, { AxiosResponse } from "axios";
 import { NotificationService } from "./NotificationService";
+import type { Job, Location, Item } from "@prisma/client";
 
 const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_KEY || "";
 const GOOGLE_DIRECTIONS_URL = "https://maps.googleapis.com/maps/api/directions/json";
@@ -221,7 +222,7 @@ export async function optimizeJobs(jobDate?: string | Date) {
   const endOfDay = new Date(jobDateObj.setHours(23, 59, 59, 999));
  
   const jobs = await db.job.findMany({ where: { assignedTruckId: null, isCompleted: false, date: { gte: startOfDay, lt: endOfDay }, }, 
-  include: { location: true , items :true}, orderBy: {  priority: 'desc'} });
+  include: { location: true , items :true}, orderBy: {  priority: 'desc'} }) as Array<Job & { location: Location | null; items: Item[] }>;
     
   const trucks = await getAvailableTrucks(jobDate);
   const assignments: any[] = [];
