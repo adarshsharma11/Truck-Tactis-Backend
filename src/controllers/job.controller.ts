@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import * as JobService from '../services/job.service';
-import { jobSchema } from '../types/job';
+import { jobSchema, jobUpdateSchema } from '../types/job';
 import { sendSuccessResponse, sendErrorResponse } from '../utils/responseHandler';
 
 // =============================
@@ -49,6 +49,20 @@ export const getJobById = async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('Error fetching job:', err);
     return sendErrorResponse(res, err.message || 'Failed to fetch job');
+  }
+};
+// =============================
+// ✏️ Update Job by ID
+// =============================
+export const updateJob = async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const payload = jobUpdateSchema.parse(req.body);
+    const job = await JobService.updateJob(id, payload);
+    return sendSuccessResponse(res, job);
+  } catch (err: any) {
+    console.error('Error updating job:', err);
+    return sendErrorResponse(res, err.message || 'Failed to update job');
   }
 };
 // =============================

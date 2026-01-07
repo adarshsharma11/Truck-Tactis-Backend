@@ -1,5 +1,5 @@
 import { db } from '../utils/db.server';
-import { TJobSchema, TJobID } from '../types/job';
+import { TJobSchema, TJobID, TJobUpdate } from '../types/job';
 import { TruckType } from '@prisma/client';
 import { NotificationService } from "./NotificationService";
 
@@ -16,7 +16,18 @@ export const createJob = async (data: TJobSchema) => {
     const loc = data.location;
     const location = await db.location.upsert({
       where: { placeId: loc.placeId ?? `manual-${Date.now()}` },
-      update: { ...loc },
+      update: {
+        name: loc.name,
+        address: loc.address,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        city: loc.city ?? null,
+        state: loc.state ?? null,
+        country: loc.country ?? null,
+        postalCode: loc.postalCode ?? null,
+        isSaved: loc.isSaved ?? false,
+        createdById: (loc as any).createdById ?? undefined,
+      },
       create: {
         placeId: loc.placeId ?? `manual-${Date.now()}`,
         name: loc.name,
@@ -28,6 +39,7 @@ export const createJob = async (data: TJobSchema) => {
         country: loc.country ?? null,
         postalCode: loc.postalCode ?? null,
         isSaved: loc.isSaved ?? false,
+        createdById: (loc as any).createdById ?? undefined,
       },
     });
     locationId = location.id;
@@ -78,6 +90,7 @@ export const createJob = async (data: TJobSchema) => {
       curfewFlag: data.curfewFlag ?? false,
       earliestTime: data.earliestTime ? new Date(data.earliestTime) : null,
       latestTime: data.latestTime ? new Date(data.latestTime) : null,
+      serviceMinutes: data.serviceMinutes ?? null,
       assignedTruckId: truckId,
       assignedDriverId: driverId,
       isCompleted: data.isCompleted ?? false,
@@ -266,4 +279,129 @@ const formatTime = (time: Date) => {
   return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+// =============================
+// ✏️ Update Job by ID
+// =============================
+export const updateJob = async (id: TJobID, data: TJobUpdate) => {
+  const existing = await db.job.findUnique({
+    where: { id },
+    include: {
+      location: true,
+      items: true,
+      assignedTruck: { include: { driver: true } },
+      assignedDriver: true,
+    },
+  });
+  if (!existing) {
+    throw new Error('JOB_NOT_FOUND');
+  }
 
+  let locationId: number | null | undefined = undefined;
+  if (data.location) {
+    const loc = data.location;
+    const location = await db.location.upsert({
+      where: { placeId: loc.placeId ?? `manual-${Date.now()}` },
+      update: {
+        name: loc.name,
+        address: loc.address,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        city: loc.city ?? null,
+        state: loc.state ?? null,
+        country: loc.country ?? null,
+        postalCode: loc.postalCode ?? null,
+        isSaved: loc.isSaved ?? false,
+        createdById: (loc as any).createdById ?? undefined,
+      },
+      create: {
+        placeId: loc.placeId ?? `manual-${Date.now()}`,
+        name: loc.name,
+        address: loc.address,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        city: loc.city ?? null,
+        state: loc.state ?? null,
+        country: loc.country ?? null,
+        postalCode: loc.postalCode ?? null,
+        isSaved: loc.isSaved ?? false,
+      },
+    });
+    locationId = location.id;
+  } else if (typeof data.locationId === 'number') {
+    locationId = data.locationId;
+  }
+
+  let truckId: number | null | undefined = undefined;
+  if (typeof data.assignedTruckId !== 'undefined') {
+    if (data.assignedTruckId === null) {
+      truckId = null;
+    } else {
+      const truck = await db.truck.findUnique({ where: { id: data.assignedTruckId } });
+      truckId = truck ? truck.id : null;
+    }
+  }
+
+  let driverId: number | null | undefined = undefined;
+  if (typeof data.assignedDriverId !== 'undefined') {
+    if (data.assignedDriverId === null) {
+      driverId = null;
+    } else {
+      const driver = await db.driver.findUnique({ where: { id: data.assignedDriverId } });
+      driverId = driver ? driver.id : null;
+    }
+  }
+
+  const earliestTime =
+    data.earliestTime === undefined
+      ? undefined
+      : data.earliestTime
+      ? new Date(data.earliestTime)
+      : null;
+
+  const latestTime =
+    data.latestTime === undefined
+      ? undefined
+      : data.latestTime
+      ? new Date(data.latestTime)
+      : null;
+
+  const updated = await db.job.update({
+    where: { id },
+    data: {
+      title: data.title ?? undefined,
+      actionType: data.actionType ?? undefined,
+      locationId,
+      notes: data.notes ?? undefined,
+      priority: typeof data.priority === 'number' ? data.priority : undefined,
+      largeTruckOnly: typeof data.largeTruckOnly === 'boolean' ? data.largeTruckOnly : undefined,
+      truckType: data.truckType ? (data.truckType as TruckType) : undefined,
+      curfewFlag: typeof data.curfewFlag === 'boolean' ? data.curfewFlag : undefined,
+      earliestTime,
+      latestTime,
+      serviceMinutes:
+        data.serviceMinutes === undefined
+          ? undefined
+          : data.serviceMinutes === null
+          ? null
+          : data.serviceMinutes,
+      assignedTruckId: truckId,
+      assignedDriverId: driverId,
+      isCompleted: typeof data.isCompleted === 'boolean' ? data.isCompleted : undefined,
+      isFiction: typeof data.isFiction === 'boolean' ? data.isFiction : undefined,
+      items:
+        Array.isArray(data.items)
+          ? { set: data.items.map((itemId) => ({ id: itemId })) }
+          : undefined,
+      date: data.date ?? undefined,
+      quantityItem: data.quantityItem ?? undefined,
+    } as any,
+    include: {
+      location: true,
+      items: true,
+      assignedTruck: { include: { driver: true } },
+      assignedDriver: true,
+    },
+  });
+
+  return updated;
+};

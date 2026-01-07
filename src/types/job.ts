@@ -20,7 +20,7 @@ export const jobSchema = z.object({
       country: z.string().optional(),
       postalCode: z.string().optional(),
       isSaved: z.boolean().optional(),
-      createdById: z.string().optional(),
+      createdById: z.string().nullable().optional(),
     })
     .optional(),
   priority: z.number().int().min(1).default(1),
@@ -35,6 +35,7 @@ export const jobSchema = z.object({
   items: z.array(z.number().int()).optional(),
   earliestTime: z.string().nullable().optional(),
   latestTime: z.string().nullable().optional(),
+  serviceMinutes: z.number().int().nullable().optional(),
   date: z.coerce.date(),
   quantityItem: z
     .array(
