@@ -61,10 +61,10 @@ app.use(notFoundHandler);
 // Error Handling Middleware
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 6001;
+// const PORT = process.env.PORT || 6001;
 
-app.listen(PORT, () => {
-  logger.info(`Listening on PORT ${PORT}`);
-});
+// app.listen(PORT, () => {
+//   logger.info(`Listening on PORT ${PORT}`);
+// });
 
 export default app;
