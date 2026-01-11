@@ -151,12 +151,30 @@ async function getRoutePath(points: LatLng[], opts?: { decodePolyline?: boolean 
 }
 
 // ---- Domain helpers -------------------------------------------------------
-async function getJobLoad(jobId: number) {
-  const items = await db.item.findMany({ where: { jobs: { some: { id: jobId } } } });
-  const totalWeight = items.reduce((sum: number, i: any) => sum + (i.weightLbs ?? 0), 0);
-  const totalVolume = items.reduce((sum: number, i: any) => sum + (((i.lengthIn ?? 0) * (i.widthIn ?? 0) * (i.heightIn ?? 0)) / 1728), 0);
+function calculateJobItemsLoad(items: Item[]) {
+  const totalWeight = items.reduce((sum, i) => sum + (i.weightLbs ?? 0), 0);
+  const totalVolume = items.reduce((sum, i) => sum + (((i.lengthIn ?? 0) * (i.widthIn ?? 0) * (i.heightIn ?? 0)) / 1728), 0);
   return { totalWeight, totalVolume };
 }
+
+function getTruckTypeLevel(type: string): number {
+  switch (type) {
+    case "SMALL": return 1;
+    case "MEDIUM": return 2;
+    case "LARGE": return 3;
+    case "HEAVY_DUTY": return 4;
+    default: return 0;
+  }
+}
+
+function isTruckTypeCompatible(truckType: string, jobTruckType: string) {
+  return getTruckTypeLevel(truckType) >= getTruckTypeLevel(jobTruckType);
+}
+
+// async function getJobLoad(jobId: number) {
+//   const items = await db.item.findMany({ where: { jobs: { some: { id: jobId } } } });
+//   return calculateJobItemsLoad(items);
+// }
 
 async function getAvailableTrucks(jobDate?: string | Date) {
   const jobDateObj = jobDate ? new Date(jobDate) : new Date();
@@ -170,6 +188,7 @@ async function getAvailableTrucks(jobDate?: string | Date) {
           isCompleted: false,
           date: { gte: startOfDay, lt: endOfDay },
         },
+        include: { location: true, items: true },
       },
     },
   });
@@ -190,87 +209,184 @@ async function getRouteDistance(lat1: number, lng1: number, lat2: number, lng2: 
   }
 }
 
-// Compute truck suitability score
-async function scoreTruckForJob(truck: any, job: any) {
-  const { totalWeight, totalVolume } = await getJobLoad(job.id);
-  const loc = job.location;
-
-  const weightScore = Math.min(1, safeNumber(truck.maxWeightLbs, 0) / Math.max(1, totalWeight));
-  const volumeScore = Math.min(1, safeNumber(truck.capacityCuFt, 0) / Math.max(1, totalVolume));
-  const capacityScore = (weightScore + volumeScore) / 2;
-
-  const sizePenalty = job.largeTruckOnly && truck.truckType === "SMALL" ? 0.5 : 1;
-
-  let distanceKm = 50; // default guess
-  if (loc?.latitude && loc?.longitude && truck.lastKnownLat && truck.lastKnownLng) {
-    distanceKm = await getRouteDistance(truck.lastKnownLat, truck.lastKnownLng, loc.latitude, loc.longitude);
-  }
-
-  const distanceScore = Math.max(0, 1 - distanceKm / 100);
-  const totalScore = 0.4 * capacityScore + 0.4 * distanceScore + 0.2 * sizePenalty;
-  return totalScore;
-}
-
 // ---- Public API -----------------------------------------------------------
 /**
- * Assign best available trucks to unassigned jobs.
- * Returns a summary object.
+ * Assign best available trucks to unassigned jobs using a VRP construction heuristic.
+ * Minimizes total fleet distance while respecting constraints.
  */
 export async function optimizeJobs(jobDate?: string | Date) {
   const jobDateObj = jobDate ? new Date(jobDate) : new Date(); // default to today
   const startOfDay = new Date(jobDateObj.setHours(0, 0, 0, 0));
   const endOfDay = new Date(jobDateObj.setHours(23, 59, 59, 999));
  
-  const jobs = await db.job.findMany({ where: { assignedTruckId: null, isCompleted: false, date: { gte: startOfDay, lt: endOfDay }, }, 
-  include: { location: true , items :true}, orderBy: {  priority: 'desc'} }) as Array<Job & { location: Location | null; items: Item[] }>;
+  // 1. Fetch unassigned jobs
+  const jobs = await db.job.findMany({ 
+    where: { 
+      assignedTruckId: null, 
+      isCompleted: false, 
+      date: { gte: startOfDay, lt: endOfDay }, 
+    }, 
+    include: { location: true, items: true }, 
+    orderBy: { priority: 'desc' } 
+  }) as Array<Job & { location: Location | null; items: Item[] }>;
     
-  const trucks = await getAvailableTrucks(jobDate);
-  const assignments: any[] = [];
-  for (const job of jobs) {
-    let bestTruck: any = null;
-    let bestScore = 0;
+  // 2. Fetch available trucks (with existing jobs)
+  const trucksDB = await getAvailableTrucks(jobDate);
+  
+  // 3. Initialize Truck State
+  interface TruckState {
+    id: number;
+    truck: any;
+    currentLat: number;
+    currentLng: number;
+    currentWeight: number;
+    currentVolume: number;
+    assignedCount: number;
+  }
 
-    for (const truck of trucks) {
-        const jobsToday = await db.job.count({
-          where: {
-            assignedTruckId: truck.id,
-            isCompleted: false,
-            date: { gte: startOfDay, lt: endOfDay },
-          }
-        });
-      if (jobsToday >= 3) continue;
-      try {
-        const jobTruckType = job.truckType;
-        const truckType = truck.truckType;
-         let isMatch = false;
+  const truckStates: TruckState[] = [];
 
-          if (jobTruckType === "LARGE") {
-            isMatch = (truckType === "LARGE");
-          }
-          else if (jobTruckType === "SMALL") {
-            isMatch = (jobTruckType === "SMALL");
-          }
-          else if (jobTruckType === "MEDIUM") {
-            isMatch = (jobTruckType === "MEDIUM" || jobTruckType === "LARGE");
-          }
-          if (isMatch) {
-          const score = await scoreTruckForJob(truck, job);
-          if (score > bestScore) {
-            bestScore = score;
-            bestTruck = truck;
-          }
+  for (const t of trucksDB) {
+    let currentWeight = 0;
+    let currentVolume = 0;
+    
+    // Calculate existing load
+    for (const j of t.jobs) {
+        const load = calculateJobItemsLoad(j.items);
+        currentWeight += load.totalWeight;
+        currentVolume += load.totalVolume;
+    }
+
+    // Determine start location (End of current route)
+    let startLat = t.lastKnownLat || 0;
+    let startLng = t.lastKnownLng || 0;
+
+    if (t.jobs.length > 0) {
+        // Sort existing jobs to find the tail of the route
+        let remaining = [...t.jobs];
+        let curr = { lat: startLat, lng: startLng };
+        
+        // Simple greedy sort to find endpoint
+        while (remaining.length > 0) {
+            let nearestIdx = -1;
+            let minDist = Infinity;
+            for (let i = 0; i < remaining.length; i++) {
+                if (!remaining[i].location) continue;
+                const d = haversine({ lat: curr.lat, lon: curr.lng }, { lat: remaining[i].location!.latitude, lon: remaining[i].location!.longitude });
+                if (d < minDist) {
+                    minDist = d;
+                    nearestIdx = i;
+                }
+            }
+            if (nearestIdx === -1) break; 
+            
+            const nextJob = remaining[nearestIdx];
+            if (nextJob.location) {
+                 curr = { lat: nextJob.location.latitude, lng: nextJob.location.longitude };
+            }
+            remaining.splice(nearestIdx, 1);
         }
-      } catch (err) {
-        console.warn(`scoreTruckForJob failed for truck ${truck?.id} / job ${job.id}:`, (err as Error).message || err);
+        startLat = curr.lat;
+        startLng = curr.lng;
+    }
+    
+    truckStates.push({
+        id: t.id,
+        truck: t,
+        currentLat: startLat,
+        currentLng: startLng,
+        currentWeight,
+        currentVolume,
+        assignedCount: t.jobs.length
+    });
+  }
+
+  // 4. Assign Jobs using Iterative Best Assignment
+  // Instead of iterating jobs, we loop until all jobs are assigned or no valid moves exist.
+  // We pick the best (Truck, Job) pair that minimizes: Distance + (AssignedCount * PENALTY)
+  
+  const BALANCE_PENALTY_KM = 5; // Each assigned job adds 5km "virtual distance" cost
+  const unassignedJobs = [...jobs];
+  const assignments: any[] = [];
+
+  while (unassignedJobs.length > 0) {
+    let bestMove: { truckState: TruckState; jobIndex: number; score: number; addedDistance: number } | null = null;
+    let minScore = Infinity;
+
+    // Check all combinations
+    for (const state of truckStates) {
+      for (let i = 0; i < unassignedJobs.length; i++) {
+        const job = unassignedJobs[i];
+        if (!job.location) continue;
+
+        // Constraint Checks
+        if (!isTruckTypeCompatible(state.truck.truckType, job.truckType)) continue;
+
+        const jobLoad = calculateJobItemsLoad(job.items);
+        const newWeight = state.currentWeight + jobLoad.totalWeight;
+        const newVolume = state.currentVolume + jobLoad.totalVolume;
+
+        if (newWeight > state.truck.maxWeightLbs) continue;
+        if (newVolume > state.truck.capacityCuFt) continue;
+        if (job.largeTruckOnly && state.truck.truckType === 'SMALL') continue;
+
+        // Cost Calculation
+        const dist = await getRouteDistance(
+            state.currentLat, 
+            state.currentLng, 
+            job.location.latitude, 
+            job.location.longitude
+        );
+
+        // Score = Distance + Penalty
+        // This balances: prefer short distances, but also prefer trucks with fewer jobs
+        const score = dist + (state.assignedCount * BALANCE_PENALTY_KM);
+
+        if (score < minScore) {
+          minScore = score;
+          bestMove = { truckState: state, jobIndex: i, score, addedDistance: dist };
+        }
       }
     }
 
-    if (bestTruck) {
-      await db.job.update({ where: { id: job.id }, data: { assignedTruckId: bestTruck.id, assignedDriverId: bestTruck.driver?.id ?? null } });
-      assignments.push({ jobId: job.id, jobTitle: job.title, assignedTruck: bestTruck.truckName, driver: bestTruck.driver?.name ?? "Unassigned", score: Math.round(bestScore * 100) / 100 });
+    // Execute best move
+    if (bestMove) {
+      const { truckState, jobIndex, addedDistance } = bestMove;
+      const job = unassignedJobs[jobIndex];
+      const jobLoad = calculateJobItemsLoad(job.items);
+
+      // Remove from pool
+      unassignedJobs.splice(jobIndex, 1);
+      console.log(addedDistance)
+
+      // Apply Assignment to DB
+      await db.job.update({ 
+        where: { id: job.id }, 
+        data: { 
+          assignedTruckId: truckState.id, 
+          assignedDriverId: truckState.truck.driverId 
+        } 
+      });
+
+      // Update Truck State
+      truckState.currentLat = job.location!.latitude;
+      truckState.currentLng = job.location!.longitude;
+      truckState.currentWeight += jobLoad.totalWeight;
+      truckState.currentVolume += jobLoad.totalVolume;
+      truckState.assignedCount++;
+
+      assignments.push({ 
+        jobId: job.id, 
+        jobTitle: job.title, 
+        assignedTruck: truckState.truck.truckName, 
+        driver: truckState.truck.driver?.name ?? "Unassigned", 
+        score: Math.round(minScore * 100) / 100 
+      });
+
+      // Notifications
       let priority = job.priority == 1 ? "High" : "Low"; 
       const itemNames = job.items?.map((item) => item.name || `Item #${item.id}`).join(", ") || "No items";
-      const recipient = bestTruck.driver?.phone ? `${bestTruck.driver.phone}` : undefined;
+      const recipient = truckState.truck.driver?.phone ? `${truckState.truck.driver.phone}` : undefined;
       try {
         if (recipient) {
           const message =
@@ -282,23 +398,17 @@ export async function optimizeJobs(jobDate?: string | Date) {
             `🧱 Items: ${itemNames}\n` +
             `⭐ Priority: ${priority}`;
 
-          if (bestTruck.driver?.smsOptIn) {
+          if (truckState.truck.driver?.smsOptIn) {
             await NotificationService.sendSMS(recipient, message);
-          }
-
-          if (bestTruck.driver?.whatsappOptIn) {
-            // await NotificationService.sendWhatsAppJobCreatedTemplate(recipient, {
-            //   manager_name: bestTruck.driver?.name || "Driver",
-            //   action_type: job.actionType,
-            //   truck_type: job.truckType == "MEDIUM" ? "ANY" : (job.truckType as any),
-            //   priority: priority,
-            //   job_items: itemNames,
-            // });
           }
         }
       } catch (err) {
         console.error("❌ Failed to send notification:", err);
       }
+
+    } else {
+      // No valid moves found for remaining jobs (e.g. constraints)
+      break;
     }
   }
 
