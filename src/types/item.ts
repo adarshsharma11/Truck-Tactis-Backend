@@ -12,7 +12,9 @@ export const itemSchema = z.object({
   requiresLargeTruck: z.boolean().default(false),
   truckType:z.nativeEnum(TruckType, { required_error: 'Truck type is required' }),
   categoryId: z.number().nullable().optional(),
-  quantity: z.number().default(0)
+  quantity: z.number().default(0),
+  trackQuantity: z.boolean().default(false),
+  trackAsMachine: z.boolean().default(false)
 });
 
 export const itemUpdateSchema = itemSchema.partial();
