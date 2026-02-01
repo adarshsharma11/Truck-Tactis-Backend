@@ -81,3 +81,154 @@ export const updateItem = async (id: TItemID, data: TItemUpdate) => {
 export const deleteItem = async (id: TItemID) => {
   await db.item.delete({ where: { id } });
 };
+
+export const getTrackedItemLocations = async () => {
+  const trackedItems = await db.item.findMany({
+    where: { trackAsMachine: true },
+  });
+
+  const allCompletedJobs = await db.job.findMany({
+    // where: { isCompleted: true },
+    include: { location: true, items: true },
+    orderBy: { date: 'asc' }
+  });
+
+  // itemId -> locationId -> quantity
+  type LocationInfo = {
+    quantity: number;
+    siteName: string;
+    address: string;
+    lat: number;
+    lng: number;
+    jobId: number;
+    jobTitle: string;
+    actionType: string;
+    date: Date;
+  };
+
+  const currentStatus: Record<number, Record<number, LocationInfo>> = {};
+
+  const WAREHOUSE_LAT = 34.2035603;
+  const WAREHOUSE_LNG = -118.484937;
+
+  // Initialize Warehouse Stock
+  for (const item of trackedItems) {
+    if (!currentStatus[item.id]) currentStatus[item.id] = {};
+    currentStatus[item.id][0] = {
+      quantity: item.quantity,
+      siteName: "Warehouse",
+      address: "Main Warehouse",
+      lat: WAREHOUSE_LAT,
+      lng: WAREHOUSE_LNG,
+      jobId: 0,
+      jobTitle: "Initial Stock",
+      actionType: "STOCK",
+      date: item.createdAt
+    };
+  }
+
+  // Replay Jobs
+  for (const job of allCompletedJobs) {
+    if (!job.location) continue;
+    const locationId = job.locationId || -1;
+
+    const jobItems = new Map<number, number>();
+
+    // From relation
+    for (const item of job.items) {
+      if (item.trackAsMachine) {
+        jobItems.set(item.id, (jobItems.get(item.id) || 0) + 1);
+      }
+    }
+
+    // From quantityItem JSON
+    if (Array.isArray(job.quantityItem)) {
+      for (const qi of job.quantityItem as any[]) {
+        const item = trackedItems.find(t => t.id === qi.id);
+        if (item) {
+          // Assume quantityItem overrides or adds to relation. 
+          // Using strict assignment if present in JSON might be safer, but let's accumulate for now
+          // to match common "add items" UI patterns.
+          // However, usually `quantityItem` is the definitive source for quantity.
+          // Let's set it if found.
+          jobItems.set(qi.id, qi.quantity);
+        }
+      }
+    }
+
+    for (const [itemId, qty] of jobItems.entries()) {
+      if (!currentStatus[itemId]) continue;
+
+      if (job.actionType === 'DROPOFF') {
+        // Move from Warehouse to Job Location
+        if (currentStatus[itemId][0]) {
+          currentStatus[itemId][0].quantity -= qty;
+          if (currentStatus[itemId][0].quantity < 0) currentStatus[itemId][0].quantity = 0;
+        }
+
+        if (!currentStatus[itemId][locationId]) {
+          currentStatus[itemId][locationId] = {
+            quantity: 0,
+            siteName: job.location.name,
+            address: job.location.address,
+            lat: job.location.latitude,
+            lng: job.location.longitude,
+            jobId: job.id,
+            jobTitle: job.title,
+            actionType: job.actionType,
+            date: job.date || job.updatedAt
+          };
+        }
+        currentStatus[itemId][locationId].quantity += qty;
+        // Update metadata
+        currentStatus[itemId][locationId].jobId = job.id;
+        currentStatus[itemId][locationId].jobTitle = job.title;
+        currentStatus[itemId][locationId].date = job.date || job.updatedAt;
+
+      } else if (job.actionType === 'PICKUP') {
+        // Move from Job Location to Warehouse
+        if (currentStatus[itemId][locationId]) {
+          currentStatus[itemId][locationId].quantity -= qty;
+          if (currentStatus[itemId][locationId].quantity <= 0) {
+            delete currentStatus[itemId][locationId];
+          }
+        }
+
+        if (currentStatus[itemId][0]) {
+          currentStatus[itemId][0].quantity += qty;
+        }
+      }
+    }
+  }
+
+  const result: any[] = [];
+  for (const itemIdStr in currentStatus) {
+    const itemId = Number(itemIdStr);
+    const itemDef = trackedItems.find(t => t.id === itemId);
+    if (!itemDef) continue;
+
+    const locations = currentStatus[itemId];
+    for (const locIdStr in locations) {
+      const loc = locations[locIdStr];
+      if (loc.quantity > 0) {
+        result.push({
+          id: itemId,
+          name: itemDef.name,
+          quantity: loc.quantity,
+          lastLocation: {
+            siteName: loc.siteName,
+            address: loc.address,
+            lat: loc.lat,
+            lng: loc.lng,
+            jobId: loc.jobId,
+            jobTitle: loc.jobTitle,
+            actionType: loc.actionType,
+            date: loc.date.toISOString()
+          }
+        });
+      }
+    }
+  }
+
+  return result;
+};

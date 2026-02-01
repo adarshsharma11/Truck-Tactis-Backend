@@ -47,3 +47,15 @@ export const deleteItem = async (req: Request, res: Response) => {
   await ItemService.deleteItem(id);
   res.json({ success: true, message: 'Item deleted successfully' });
 };
+
+export const getTrackedItemsLocations = async (_req: Request, res: Response) => {
+  try {
+    const items = await ItemService.getTrackedItemLocations();
+    res.json({ success: true, data: items });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to load tracked items",
+    });
+  }
+};
