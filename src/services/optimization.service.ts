@@ -387,6 +387,10 @@ export async function optimizeJobs(jobDate?: string | Date) {
       let priority = job.priority == 1 ? "High" : "Low"; 
       const itemNames = job.items?.map((item) => item.name || `Item #${item.id}`).join(", ") || "No items";
       const recipient = truckState.truck.driver?.phone ? `${truckState.truck.driver.phone}` : undefined;
+      
+      const destination = `${job.location!.latitude},${job.location!.longitude}`;
+      const routeLink = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+      
       try {
         if (recipient) {
           const message =
@@ -395,11 +399,20 @@ export async function optimizeJobs(jobDate?: string | Date) {
             `⚙️ Action Type: ${job.actionType}\n` +
             `🚚 Truck Type: ${job.truckType == "MEDIUM" ? "ANY" : job.truckType}\n` +
             `📍 Location: ${job.location?.address || job.location?.name || "N/A"}\n` +
+            `🗺️ Map: ${routeLink}\n` +
             `🧱 Items: ${itemNames}\n` +
             `⭐ Priority: ${priority}`;
 
           if (truckState.truck.driver?.smsOptIn) {
             await NotificationService.sendSMS(recipient, message);
+          }
+          if (truckState.truck.driver?.whatsappOptIn) {
+            const jobSummary = `${job.title} | ${job.actionType} | ${job.location?.address || job.location?.name || "N/A"} | Items: ${itemNames}`;
+            await NotificationService.sendWhatsAppJobAssignedTemplate(recipient, {
+              job_id: String(job.id),
+              job_summary: jobSummary,
+              route_link: routeLink,
+            });
           }
         }
       } catch (err) {
