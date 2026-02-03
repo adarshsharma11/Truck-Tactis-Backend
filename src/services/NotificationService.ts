@@ -1,4 +1,4 @@
-import { twilioClient, TWILIO_WHATSAPP_NUMBER, TWILIO_SMS_NUMBER, TWILIO_MESSAGING_SERVICE_SID, TWILIO_CONTENT_SID_JOB_CREATED } from "../config/twilioConfig";
+import { twilioClient, TWILIO_WHATSAPP_NUMBER, TWILIO_SMS_NUMBER, TWILIO_MESSAGING_SERVICE_SID, TWILIO_CONTENT_SID_JOB_CREATED, TWILIO_CONTENT_SID_JOB_ASSIGNED } from "../config/twilioConfig";
 
 export class NotificationService {
   /**
@@ -79,6 +79,36 @@ export class NotificationService {
       });
 
   
+      try {
+        const status = await NotificationService.getMessageStatus(response.sid);
+        console.log("ℹ️ WhatsApp template delivery status:", status);
+      } catch {}
+    } catch (error: any) {
+      console.error("❌ Error sending WhatsApp template message:", error.message);
+      throw error;
+    }
+  }
+
+  static async sendWhatsAppJobAssignedTemplate(
+    to: string,
+    variables: {
+      job_id: string;
+      job_summary: string;
+      route_link: string;
+    }
+  ): Promise<void> {
+    try {
+      if (!TWILIO_MESSAGING_SERVICE_SID || !TWILIO_CONTENT_SID_JOB_ASSIGNED) {
+        throw new Error("Twilio Messaging Service SID or Content SID missing");
+      }
+      const response = await twilioClient.messages.create({
+        contentSid: TWILIO_CONTENT_SID_JOB_ASSIGNED,
+        contentVariables: JSON.stringify(variables),
+        from: TWILIO_WHATSAPP_NUMBER,
+        messagingServiceSid: TWILIO_MESSAGING_SERVICE_SID,
+        to: `whatsapp:${to}`,
+      });
+
       try {
         const status = await NotificationService.getMessageStatus(response.sid);
         console.log("ℹ️ WhatsApp template delivery status:", status);
