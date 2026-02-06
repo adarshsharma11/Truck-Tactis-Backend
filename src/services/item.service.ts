@@ -159,7 +159,7 @@ export const getTrackedItemLocations = async () => {
     for (const [itemId, qty] of jobItems.entries()) {
       if (!currentStatus[itemId]) continue;
 
-      if (job.actionType === 'DROPOFF') {
+      if (job.actionType === 'PICKUP') {
         // Move from Warehouse to Job Location
         if (currentStatus[itemId][0]) {
           currentStatus[itemId][0].quantity -= qty;
@@ -180,12 +180,13 @@ export const getTrackedItemLocations = async () => {
           };
         }
         currentStatus[itemId][locationId].quantity += qty;
-        // Update metadata
+        // Update metadata (reflect pickup location and job)
         currentStatus[itemId][locationId].jobId = job.id;
         currentStatus[itemId][locationId].jobTitle = job.title;
+        currentStatus[itemId][locationId].actionType = job.actionType;
         currentStatus[itemId][locationId].date = job.date || job.updatedAt;
 
-      } else if (job.actionType === 'PICKUP') {
+      } else if (job.actionType === 'DROPOFF') {
         // Move from Job Location to Warehouse
         if (currentStatus[itemId][locationId]) {
           currentStatus[itemId][locationId].quantity -= qty;
@@ -196,6 +197,11 @@ export const getTrackedItemLocations = async () => {
 
         if (currentStatus[itemId][0]) {
           currentStatus[itemId][0].quantity += qty;
+          // Update warehouse metadata to reflect latest dropoff job
+          currentStatus[itemId][0].jobId = job.id;
+          currentStatus[itemId][0].jobTitle = job.title;
+          currentStatus[itemId][0].actionType = job.actionType;
+          currentStatus[itemId][0].date = job.date || job.updatedAt;
         }
       }
     }
