@@ -8,7 +8,6 @@ const router = express.Router();
 // Params body : username , password
 router.post('/login', AuthController.validateLoginData, AuthController.login);
 
-// Acess : Private
 // POST : logout
 
 router.post('/logout', protectAuth, AuthController.logout);
