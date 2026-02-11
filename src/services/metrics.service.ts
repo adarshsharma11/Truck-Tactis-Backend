@@ -33,29 +33,52 @@ export const getMetrics = async (query: TMetricsQuery): Promise<TMetricsResponse
     jobWhere.assignedDriverId = driverId;
   }
 
-  // Get jobs completed in the date range
-  const jobsCompleted = await db.job.count({
-    where: {
-      ...jobWhere,
-      isCompleted: true
+  // Get jobs in the date range
+  const allJobs = await db.job.findMany({
+    where: jobWhere,
+    select: {
+      id: true,
+      isCompleted: true,
+      assignedTruckId: true,
+      date: true,
+      serviceMinutes: true
     }
   });
 
-  // Get jobs deferred (not completed) in the date range
-  const jobsDeferred = await db.job.count({
-    where: {
-      ...jobWhere,
-      isCompleted: false
+  const now = new Date();
+
+  // Logic: 
+  // 1. If job is marked isCompleted: true -> Completed
+  // 2. If job has a truckId AND the date is in the past -> Completed
+  // 3. Otherwise -> Deferred
+  let jobsCompleted = 0;
+  let jobsDeferred = 0;
+  let totalServiceTime = 0;
+  let serviceTimeCount = 0;
+
+  allJobs.forEach(job => {
+    const isPast = job.date ? new Date(job.date) < now : false;
+    const hasTruck = job.assignedTruckId !== null;
+
+    if (job.isCompleted || (hasTruck && isPast)) {
+      jobsCompleted++;
+      if (job.serviceMinutes) {
+        totalServiceTime += job.serviceMinutes;
+        serviceTimeCount++;
+      }
+    } else {
+      jobsDeferred++;
     }
   });
 
-  // Calculate on-time percentage (assuming jobs with earliestTime and completion within time)
-  const totalJobs = jobsCompleted + jobsDeferred;
-  const onTimePercentage = totalJobs > 0 ? Math.round((jobsCompleted / totalJobs) * 100) : 0;
+  // Calculate average service time using serviceMinutes field
+  const avgServiceTimeMinutes = serviceTimeCount > 0 
+    ? Math.round(totalServiceTime / serviceTimeCount) 
+    : 0;
 
-  // Calculate average service time (mock calculation based on job duration)
-  // This is a simplified calculation - you might want to enhance this based on your actual business logic
-  const avgServiceTimeMinutes = 45; // Default average service time
+  // Calculate on-time percentage
+  const totalJobsCount = jobsCompleted + jobsDeferred;
+  const onTimePercentage = totalJobsCount > 0 ? Math.round((jobsCompleted / totalJobsCount) * 100) : 0;
 
   // Get utilization by truck
   const trucks = await db.truck.findMany({
@@ -63,15 +86,19 @@ export const getMetrics = async (query: TMetricsQuery): Promise<TMetricsResponse
     include: {
       jobs: {
         where: jobWhere,
-        select: { id: true, isCompleted: true }
+        select: { id: true, isCompleted: true, date: true, assignedTruckId: true }
       }
     }
   });
 
   const utilizationByTruck: TTruckUtilization[] = trucks.map(truck => {
     const totalJobsForTruck = truck.jobs.length;
-    const completedJobs = truck.jobs.filter(job => job.isCompleted).length;
-    const utilization = totalJobsForTruck > 0 ? Math.round((completedJobs / totalJobsForTruck) * 100) : 0;
+    const completedJobsForTruck = truck.jobs.filter(job => {
+      const isPast = job.date ? new Date(job.date) < now : false;
+      const hasTruck = job.assignedTruckId !== null;
+      return job.isCompleted || (hasTruck && isPast);
+    }).length;
+    const utilization = totalJobsForTruck > 0 ? Math.round((completedJobsForTruck / totalJobsForTruck) * 100) : 0;
     
     return {
       truck_name: truck.truckName,
@@ -93,24 +120,68 @@ export const getMetrics = async (query: TMetricsQuery): Promise<TMetricsResponse
 // 📈 Get Jobs Trend Data
 // =============================
 export const getJobsTrend = async (query: TMetricsQuery) => {
-  const { from } = query;
+  const { from, to, truckId, driverId } = query;
   
-  const startDate = from ? new Date(from) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // Last 7 days
+  const endDate = to ? new Date(to) : new Date();
+  const startDate = from ? new Date(from) : new Date(endDate.getTime() - 6 * 24 * 60 * 60 * 1000); // Default to last 7 days including today
 
-  // Generate daily data for the last 7 days
+  // Set time for accurate filtering
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+
+  const jobWhere: any = {
+    createdAt: {
+      gte: start,
+      lte: end
+    }
+  };
+
+  if (truckId) jobWhere.assignedTruckId = truckId;
+  if (driverId) jobWhere.assignedDriverId = driverId;
+
+  const jobs = await db.job.findMany({
+    where: jobWhere,
+    select: {
+      id: true,
+      isCompleted: true,
+      assignedTruckId: true,
+      date: true,
+      createdAt: true
+    }
+  });
+
+  const now = new Date();
+  const isJobCompleted = (job: any) => job.isCompleted || (!!job.assignedTruckId && !!job.date && new Date(job.date) < now);
+
   const trendData = [];
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + i);
+  const daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  // Calculate number of days to show
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  for (let i = 0; i < diffDays; i++) {
+    const currentDay = new Date(start);
+    currentDay.setDate(start.getDate() + i);
     
-    // Mock data - in a real implementation, you would query the database for each day
-    const completed = Math.floor(Math.random() * 20) + 20; // 20-40 jobs
-    const deferred = Math.floor(Math.random() * 5) + 1; // 1-5 jobs
-    
+    const dayStart = new Date(currentDay);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(currentDay);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const dayJobs = jobs.filter(job => {
+      const jobCreatedAt = new Date(job.createdAt);
+      return jobCreatedAt >= dayStart && jobCreatedAt <= dayEnd;
+    });
+
+    const completed = dayJobs.filter(isJobCompleted).length;
+    const deferred = dayJobs.length - completed;
+
     trendData.push({
-      day: days[date.getDay() === 0 ? 6 : date.getDay() - 1], // Convert to Mon-Sun
+      day: daysShort[currentDay.getDay()],
+      date: currentDay.toISOString().split('T')[0],
       completed,
       deferred
     });
