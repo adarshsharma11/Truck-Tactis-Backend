@@ -133,6 +133,16 @@ export const createDriver = async (driver: TDriverWrite): Promise<TDriverRead> =
 // 👨‍✈️ Update driver info
 // =============================
 export const updateDriver = async (driver: TDriverUpdate, id: TDriverID): Promise<TDriverRead> => {
+  // Get existing driver to check current role
+  const existingDriver = await db.driver.findUnique({
+    where: { id },
+    include: { truck: true },
+  });
+
+  if (!existingDriver) {
+    throw new Error('DRIVER_NOT_FOUND');
+  }
+
   const updated = await db.driver.update({
     where: { id },
     data: {
@@ -151,11 +161,56 @@ export const updateDriver = async (driver: TDriverUpdate, id: TDriverID): Promis
     },
   }) as any;
 
-  if (driver.truckId) {
-    await db.truck.update({
-      where: { id: driver.truckId },
-      data: { driverId: id },
+  // If role is not DRIVER, delete truck data (clear truck association)
+  // This should happen BEFORE trying to assign a new truck
+  if (driver.role && driver.role !== 'DRIVER') {
+    // If driver had a truck, clear the truck association
+    if (existingDriver.truckId) {
+      await db.truck.update({
+        where: { id: existingDriver.truckId },
+        data: {
+          driverId: null,
+          currentStatus: 'AVAILABLE',
+        },
+      });
+    }
+    // Clear driver's truckId (ignore any new truckId being assigned)
+    await db.driver.update({
+      where: { id },
+      data: { truckId: null },
     });
+  } else if (driver.truckId !== undefined) {
+    // Role is DRIVER (or not changed), allow truck assignment/change
+    
+    // If driver already has a truck, clear it first
+    if (existingDriver.truckId) {
+      await db.truck.update({
+        where: { id: existingDriver.truckId },
+        data: { driverId: null, currentStatus: 'AVAILABLE' },
+      });
+    }
+    
+    // If assigning to a new/different truck, clear the previous driver of that truck if any
+    if (driver.truckId !== null) {
+      const existingTruck = await db.truck.findUnique({
+        where: { id: driver.truckId },
+        select: { driverId: true },
+      });
+      
+      if (existingTruck?.driverId && existingTruck.driverId !== id) {
+        // Clear the previous driver's truck association
+        await db.driver.update({
+          where: { id: existingTruck.driverId },
+          data: { truckId: null },
+        });
+      }
+      
+      // Now assign the new truck to this driver
+      await db.truck.update({
+        where: { id: driver.truckId },
+        data: { driverId: id },
+      });
+    }
   }
 
   return {
