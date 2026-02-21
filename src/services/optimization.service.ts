@@ -4,6 +4,10 @@ import axios, { AxiosResponse } from "axios";
 import { NotificationService } from "./NotificationService";
 import type { Job, Location, Item } from "@prisma/client";
 
+// Static truck origin location (used instead of live GPS location)
+const TRUCK_ORIGIN_LAT = 34.2035603;
+const TRUCK_ORIGIN_LNG = -118.484937;
+
 const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_KEY || "";
 const GOOGLE_DIRECTIONS_URL = "https://maps.googleapis.com/maps/api/directions/json";
 
@@ -257,9 +261,9 @@ export async function optimizeJobs(jobDate?: string | Date) {
         currentVolume += load.totalVolume;
     }
 
-    // Determine start location (End of current route)
-    let startLat = t.lastKnownLat || 0;
-    let startLng = t.lastKnownLng || 0;
+    // Determine start location (use static origin instead of live location)
+    let startLat = TRUCK_ORIGIN_LAT;
+    let startLng = TRUCK_ORIGIN_LNG;
 
     if (t.jobs.length > 0) {
         // Sort existing jobs to find the tail of the route
@@ -463,15 +467,15 @@ export async function getOptimizedRoutes(opts?: { decodePolyline?: boolean; sort
     let sortedJobs = jobs;
 
     if (sortStrategy === "nearest") {
-      // Greedy sort by distance from truck start
+      // Greedy sort by distance from static truck origin
       sortedJobs = [...jobs].sort((a, b) => {
         if (!a.location || !b.location) return 0;
         const distA = haversine(
-          { lat: truck.lastKnownLat as number, lon: truck.lastKnownLng as number },
+          { lat: TRUCK_ORIGIN_LAT, lon: TRUCK_ORIGIN_LNG },
           { lat: a.location.latitude as number, lon: a.location.longitude as number }
         );
         const distB = haversine(
-          { lat: truck.lastKnownLat as number, lon: truck.lastKnownLng as number },
+          { lat: TRUCK_ORIGIN_LAT, lon: TRUCK_ORIGIN_LNG },
           { lat: b.location.latitude as number, lon: b.location.longitude as number }
         );
         return distA - distB;
@@ -479,7 +483,7 @@ export async function getOptimizedRoutes(opts?: { decodePolyline?: boolean; sort
     }
 
     const points: RoutePoint[] = [
-      { lat: truck.lastKnownLat as number, lng: truck.lastKnownLng as number },
+      { lat: TRUCK_ORIGIN_LAT, lng: TRUCK_ORIGIN_LNG },
       ...sortedJobs
         .filter((j: any) => j.location)
         .map((j: any) => ({
