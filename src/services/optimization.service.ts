@@ -393,7 +393,10 @@ export async function optimizeJobs(jobDate?: string | Date) {
       const recipient = truckState.truck.driver?.phone ? `${truckState.truck.driver.phone}` : undefined;
       
       const destination = `${job.location!.latitude},${job.location!.longitude}`;
-      const routeLink = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+      // Use truck's GPS location if available, otherwise fall back to static origin
+      const originLat = truckState.truck.lastKnownLat ?? TRUCK_ORIGIN_LAT;
+      const originLng = truckState.truck.lastKnownLng ?? TRUCK_ORIGIN_LNG;
+      const routeLink = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${encodeURIComponent(destination)}`;
       
       try {
         if (recipient) {
