@@ -3,45 +3,32 @@ name: 🚀 Deploy Backend
 on:
   push:
     branches:
-      - main   # deploy when main updated
+      - main
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # checkout repo
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # setup node
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
-      # install deps
+      # install deps clean
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      # install TypeScript globally for compilation
-      - name: Install TypeScript
-        run: npm install -g typescript
-
-      # generate Prisma client
-      - name: Generate Prisma Client
+      # build project (this should include prisma generate + tsc)
+      - name: Build project
         run: npm run build
 
-      # compile TypeScript
-      - name: Compile TypeScript
-        run: tsc
-
-      # optional test step
-      # - name: Run tests
-      #   run: npm test
-
-      # deploy to server via SSH
-      - name: 🚀 Deploy to Server
+      # 🚀 deploy to droplet
+      - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -50,7 +37,6 @@ jobs:
           script: |
             cd /var/www/app/Truck-Tactis-Backend
             git pull origin main
-            npm install
+            npm ci
             npm run build
-            npx tsc
-            pm2 restart truck-api
+            pm2 restart truck-api || pm2 start dist/index.js --name truck-api
