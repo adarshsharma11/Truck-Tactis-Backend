@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as TruckService from '../services/truck.service';
-import { truckSchema } from '../types/truck';
+import { truckSchema, truckUpdateSchema } from '../types/truck';
 import {
   sendSuccessResponse,
   sendErrorResponse,
@@ -32,6 +32,26 @@ export const getTrucks = async (req: Request, res: Response, next: NextFunction)
   } catch (error: any) {
     console.error('Error fetching trucks:', error);
     return sendErrorResponse(res, error.message || 'Failed to fetch trucks');
+  }
+};
+
+/**
+ * @route   PUT /api/trucks/:id
+ * @desc    Update a truck
+ */
+export const updateTruck = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const truckId = Number(req.params.id);
+    if (!truckId || isNaN(truckId)) {
+      return sendErrorResponse(res, 'Invalid truck ID', 400);
+    }
+
+    const truckUpdateData = truckUpdateSchema.parse(req.body);
+    const updatedTruck = await TruckService.updateTruck(truckUpdateData, truckId);
+    return sendSuccessResponse(res, updatedTruck);
+  } catch (error: any) {
+    console.error('Error updating truck:', error);
+    return sendErrorResponse(res, error.message || 'Failed to update truck');
   }
 };
 
