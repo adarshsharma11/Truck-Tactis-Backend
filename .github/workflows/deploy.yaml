@@ -37,6 +37,6 @@ jobs:
           script: |
             cd /var/www/app/Truck-Tactis-Backend
             git pull origin main
-            npm ci
+            npm install
             npm run build
             pm2 restart truck-api || pm2 start dist/index.js --name truck-api
